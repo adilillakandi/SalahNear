@@ -1,0 +1,11 @@
+{
+  "name": "salahnear-mosque-ingestion",
+  "version": "1.0.0",
+  "description": "Kerala Mosque Ingestion Pipeline for SalahNear from OpenStreetMap Overpass API",
+  "type": "module",
+  "scripts": {
+    "start": "node ingest.js",
+    "test-fetch": "node ingest.js --district=Kozhikode --limit=20"
+  },
+  "dependencies": {}
+}
