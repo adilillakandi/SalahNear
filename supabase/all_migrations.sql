@@ -6,6 +6,9 @@
 
 begin;
 
+-- Ensure public and extensions schemas are in search path
+set search_path = public, extensions;
+
 -- 1. EXTENSIONS
 create extension if not exists pgcrypto;
 create extension if not exists "uuid-ossp";

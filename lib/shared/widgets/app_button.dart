@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/app_colors.dart';
 
 class AppButton extends StatelessWidget {
@@ -41,9 +42,7 @@ class AppButton extends StatelessWidget {
         backgroundColor: backgroundColor ?? AppColors.primary,
         foregroundColor: Colors.white,
         minimumSize: const Size(double.infinity, 48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: _buildChild(context, isOutlined: false),
     );
@@ -54,10 +53,7 @@ class AppButton extends StatelessWidget {
       return const SizedBox(
         height: 20,
         width: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.white,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
       );
     }
 
@@ -65,7 +61,11 @@ class AppButton extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 20, color: isOutlined ? AppColors.primary : Colors.white),
+          Icon(
+            icon,
+            size: 20,
+            color: isOutlined ? AppColors.primary : Colors.white,
+          ),
           const SizedBox(width: 8),
           Text(
             text,
@@ -89,4 +89,3 @@ class AppButton extends StatelessWidget {
     );
   }
 }
-
