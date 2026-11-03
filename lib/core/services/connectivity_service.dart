@@ -11,3 +11,4 @@ class ConnectivityService {
   Stream<List<ConnectivityResult>> get onConnectivityChanged =>
       _connectivity.onConnectivityChanged;
 }
+

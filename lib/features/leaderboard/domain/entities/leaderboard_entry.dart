@@ -19,3 +19,4 @@ class LeaderboardEntry {
     this.isCurrentUser = false,
   });
 }
+

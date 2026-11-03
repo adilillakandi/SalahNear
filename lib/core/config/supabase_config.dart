@@ -9,23 +9,23 @@ class SupabaseConfig {
 
   static Future<void> initialize() async {
     try {
-      if (EnvConfig.supabaseUrl.contains('placeholder') ||
-          EnvConfig.supabaseAnonKey.contains('placeholder')) {
+      if (EnvConfig.supabaseUrl.contains('placeholder')) {
         debugPrint(
-          '[SupabaseConfig] Warning: Running with placeholder Supabase credentials. '
-          'Provide real credentials via --dart-define or update EnvConfig.',
+          '[SupabaseConfig] Warning: Running with placeholder Supabase credentials.',
         );
         return;
       }
 
       await Supabase.initialize(
         url: EnvConfig.supabaseUrl,
-        publishableKey: EnvConfig.supabaseAnonKey,
+        publishableKey: EnvConfig.supabasePublishableKey.isNotEmpty
+            ? EnvConfig.supabasePublishableKey
+            : EnvConfig.supabaseAnonKey,
         authOptions: const FlutterAuthClientOptions(
           autoRefreshToken: true,
         ),
       );
-      debugPrint('[SupabaseConfig] Supabase successfully initialized.');
+      debugPrint('[SupabaseConfig] Supabase successfully initialized with project: ${EnvConfig.supabaseUrl}');
     } catch (e, stack) {
       debugPrint('[SupabaseConfig] Failed to initialize Supabase: $e\n$stack');
     }

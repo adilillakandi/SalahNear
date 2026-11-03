@@ -22,3 +22,4 @@ final isUserAuthenticatedProvider = Provider<bool>((ref) {
   final client = ref.watch(supabaseClientProvider);
   return client?.auth.currentUser != null;
 });
+

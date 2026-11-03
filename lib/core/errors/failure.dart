@@ -23,3 +23,4 @@ class CacheFailure extends Failure {
 class AttendanceFailure extends Failure {
   const AttendanceFailure(super.message, {super.code});
 }
+

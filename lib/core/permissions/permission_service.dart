@@ -28,3 +28,4 @@ class PermissionService {
     return await Permission.locationWhenInUse.isGranted;
   }
 }
+

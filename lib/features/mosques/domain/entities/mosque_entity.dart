@@ -39,3 +39,4 @@ class MosqueEntity {
     return '${(distanceMeters! / 1000).toStringAsFixed(1)} km';
   }
 }
+

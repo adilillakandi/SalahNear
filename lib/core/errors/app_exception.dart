@@ -24,3 +24,4 @@ class AuthExceptionWrapper extends AppException {
 class NetworkException extends AppException {
   const NetworkException(super.message, {super.code, super.details});
 }
+

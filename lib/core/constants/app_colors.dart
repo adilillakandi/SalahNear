@@ -41,3 +41,4 @@ class AppColors {
   static const Color streakFire = Color(0xFFFF6D00);
   static const Color pointsGold = Color(0xFFFFB300);
 }
+
