@@ -8,6 +8,8 @@ import 'package:salah_near/features/prayer_times/presentation/providers/prayer_t
 import 'package:salah_near/features/mosques/presentation/providers/mosque_provider.dart';
 import 'package:salah_near/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 import 'package:salah_near/features/attendance/presentation/providers/attendance_provider.dart';
+import 'package:salah_near/features/friends/presentation/providers/friends_provider.dart';
+import 'package:salah_near/features/friends/presentation/widgets/encounter_card.dart';
 import 'package:salah_near/features/home/presentation/widgets/next_prayer_card.dart';
 import 'package:salah_near/features/home/presentation/widgets/prayer_time_row.dart';
 import 'package:salah_near/features/home/presentation/widgets/streak_badge.dart';
@@ -22,6 +24,7 @@ class HomeScreen extends ConsumerWidget {
     final selectedMosque = ref.watch(selectedMosqueProvider);
     final streakDays = ref.watch(userStreakDaysProvider);
     final totalPoints = ref.watch(userTotalPointsProvider);
+    final encountersAsync = ref.watch(pendingEncountersProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +99,21 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // Pending Mosque Encounter Banner
+                encountersAsync.when(
+                  data: (encounters) {
+                    if (encounters.isEmpty) return const SizedBox.shrink();
+                    final first = encounters.first;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: EncounterCard(encounter: first),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (error, stack) => const SizedBox.shrink(),
+                ),
 
                 // Next Prayer Hero Card
                 NextPrayerCard(

@@ -16,6 +16,9 @@ final selectedMosqueProvider = StateProvider<MosqueEntity?>((ref) => null);
 // Search query provider
 final mosqueSearchQueryProvider = StateProvider<String>((ref) => '');
 
+// District filter provider ('All' or any Kerala district)
+final selectedDistrictFilterProvider = StateProvider<String>((ref) => 'All');
+
 // Nearby mosques based on current location
 final nearbyMosquesProvider = FutureProvider<List<MosqueEntity>>((ref) async {
   final repository = ref.watch(mosqueRepositoryProvider);
@@ -30,9 +33,19 @@ final nearbyMosquesProvider = FutureProvider<List<MosqueEntity>>((ref) async {
 // Search results provider
 final searchedMosquesProvider = FutureProvider<List<MosqueEntity>>((ref) async {
   final query = ref.watch(mosqueSearchQueryProvider);
-  if (query.trim().isEmpty) {
+  final district = ref.watch(selectedDistrictFilterProvider);
+  final repository = ref.watch(mosqueRepositoryProvider);
+
+  if (query.trim().isEmpty && (district == 'All')) {
     return ref.watch(nearbyMosquesProvider.future);
   }
+
+  return repository.searchMosques(query, district: district);
+});
+
+// Mosque Iqamah Timetable Provider
+final mosqueIqamahProvider =
+    FutureProvider.family<Map<String, String>, String>((ref, mosqueId) async {
   final repository = ref.watch(mosqueRepositoryProvider);
-  return repository.searchMosques(query);
+  return repository.getMosqueIqamahSchedule(mosqueId);
 });

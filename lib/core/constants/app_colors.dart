@@ -23,6 +23,8 @@ class AppColors {
   static const Color surfaceVariantLight = Color(0xFFEEF2F1);
   static const Color onBackgroundLight = Color(0xFF191C1B);
   static const Color onSurfaceLight = Color(0xFF191C1B);
+  static const Color textPrimary = Color(0xFF191C1B);
+  static const Color textSecondary = Color(0xFF757575);
 
   // Dark Theme Colors
   static const Color backgroundDark = Color(0xFF0F1412);

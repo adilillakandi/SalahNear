@@ -1,6 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:salah_near/core/constants/app_constants.dart';
 import 'package:salah_near/core/utils/logger.dart';
+
+final locationServiceProvider = Provider<LocationService>((ref) {
+  return LocationService();
+});
 
 class LocationService {
   Future<bool> checkPermission() async {

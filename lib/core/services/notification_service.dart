@@ -1,7 +1,14 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:salah_near/core/utils/logger.dart';
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  final service = NotificationService();
+  service.initialize();
+  return service;
+});
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -43,7 +50,8 @@ class NotificationService {
       _isInitialized = true;
       AppLogger.info('NotificationService successfully initialized.');
     } catch (e, stack) {
-      AppLogger.error('Failed to initialize NotificationService', error: e, stackTrace: stack);
+      AppLogger.error('Failed to initialize NotificationService',
+          error: e, stackTrace: stack);
     }
   }
 
@@ -51,12 +59,15 @@ class NotificationService {
     required int id,
     required String prayerName,
     required DateTime prayerTime,
+    int offsetMinutes = 0,
     String? mosqueName,
   }) async {
     if (!_isInitialized) await initialize();
 
     try {
-      final scheduledDate = tz.TZDateTime.from(prayerTime, tz.local);
+      final scheduledInstant =
+          prayerTime.subtract(Duration(minutes: offsetMinutes));
+      final scheduledDate = tz.TZDateTime.from(scheduledInstant, tz.local);
       if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
         return; // Do not schedule past notifications
       }
@@ -64,10 +75,12 @@ class NotificationService {
       const androidDetails = AndroidNotificationDetails(
         'salah_reminders_channel',
         'Salah Reminders',
-        channelDescription: 'Notifications for upcoming prayer times and congregation calls',
+        channelDescription:
+            'Notifications for upcoming prayer times and congregation calls',
         importance: Importance.high,
         priority: Priority.high,
         playSound: true,
+        enableVibration: true,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -81,21 +94,63 @@ class NotificationService {
         iOS: iosDetails,
       );
 
+      final title = offsetMinutes > 0
+          ? '$prayerName in $offsetMinutes minutes'
+          : '$prayerName Prayer Time';
+
+      final body = mosqueName != null
+          ? 'Congregational prayer at $mosqueName'
+          : 'It is time for $prayerName prayer';
+
       await _notificationsPlugin.zonedSchedule(
         id: id,
-        title: '$prayerName Prayer Time',
-        body: mosqueName != null
-            ? 'It is time for $prayerName prayer at $mosqueName'
-            : 'It is time for $prayerName prayer',
+        title: title,
+        body: body,
         scheduledDate: scheduledDate,
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
 
-      AppLogger.info('Scheduled reminder for $prayerName at $prayerTime');
+      AppLogger.info(
+          'Scheduled reminder for $prayerName at $scheduledDate (offset: $offsetMinutes min)');
     } catch (e, stack) {
-      AppLogger.error('Failed to schedule reminder for $prayerName', error: e, stackTrace: stack);
+      AppLogger.error('Failed to schedule reminder for $prayerName',
+          error: e, stackTrace: stack);
     }
+  }
+
+  Future<void> showTestNotification({
+    required String title,
+    required String body,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    const androidDetails = AndroidNotificationDetails(
+      'salah_test_channel',
+      'Salah Test Notifications',
+      channelDescription: 'Channel for audio and reminder test triggers',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notificationsPlugin.show(
+      id: 9999,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
   }
 
   Future<void> cancelAll() async {

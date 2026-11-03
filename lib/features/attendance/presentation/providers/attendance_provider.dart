@@ -39,6 +39,24 @@ class AttendanceSubmissionNotifier
     required this.locationService,
   }) : super(const AsyncValue.data(null));
 
+  Future<AttendanceSubmission?> submit({
+    required AttendanceSubmission submission,
+    File? evidencePhoto,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final result = await repository.submitAttendance(
+        submission: submission,
+        evidencePhoto: evidencePhoto,
+      );
+      state = AsyncValue.data(result);
+      return result;
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+      return null;
+    }
+  }
+
   Future<bool> submitCheckIn({
     required String mosqueId,
     required String mosqueName,

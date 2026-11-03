@@ -37,17 +37,8 @@ enum PrayerType {
     }
   }
 
-  int get basePoints {
-    switch (this) {
-      case PrayerType.fajr:
-        return 25;
-      case PrayerType.dhuhr:
-      case PrayerType.asr:
-      case PrayerType.maghrib:
-      case PrayerType.isha:
-        return 20;
-    }
-  }
+  int get basePoints => 5;
+  int get mosquePrayerPoints => 5;
 
   static PrayerType? fromString(String? value) {
     if (value == null) return null;

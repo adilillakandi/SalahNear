@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:salah_near/features/attendance/presentation/screens/attendance_history_screen.dart';
 import 'package:salah_near/features/attendance/presentation/screens/attendance_screen.dart';
 import 'package:salah_near/features/authentication/presentation/screens/login_screen.dart';
+import 'package:salah_near/features/authentication/presentation/screens/otp_verification_screen.dart';
 import 'package:salah_near/features/friends/presentation/screens/friends_screen.dart';
 import 'package:salah_near/features/home/presentation/screens/home_screen.dart';
 import 'package:salah_near/features/home/presentation/screens/main_shell_screen.dart';
 import 'package:salah_near/features/leaderboard/presentation/screens/leaderboard_screen.dart';
 import 'package:salah_near/features/mosques/presentation/screens/mosque_detail_screen.dart';
 import 'package:salah_near/features/mosques/presentation/screens/mosques_screen.dart';
+import 'package:salah_near/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:salah_near/features/prayer_times/presentation/screens/prayer_times_screen.dart';
 import 'package:salah_near/features/profile/presentation/screens/profile_screen.dart';
 import 'package:salah_near/features/settings/presentation/screens/settings_screen.dart';
@@ -90,6 +92,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.otpVerify,
+        builder: (context, state) => const OtpVerificationScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

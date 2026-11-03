@@ -8,10 +8,6 @@ import 'package:salah_near/features/prayer_times/domain/repositories/prayer_time
 import 'package:salah_near/features/prayer_times/domain/services/prayer_calculator_service.dart';
 import 'package:salah_near/features/prayer_times/data/repositories/prayer_times_repository_impl.dart';
 
-final locationServiceProvider = Provider<LocationService>((ref) {
-  return LocationService();
-});
-
 final prayerCalculatorServiceProvider = Provider<PrayerCalculatorService>((ref) {
   return PrayerCalculatorService();
 });

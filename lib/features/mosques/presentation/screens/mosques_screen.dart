@@ -9,23 +9,42 @@ import 'package:salah_near/features/mosques/presentation/providers/mosque_provid
 class MosquesScreen extends ConsumerWidget {
   const MosquesScreen({super.key});
 
+  static const List<String> _districts = [
+    'All',
+    'Kozhikode',
+    'Malappuram',
+    'Kannur',
+    'Wayanad',
+    'Palakkad',
+    'Thrissur',
+    'Ernakulam',
+    'Idukki',
+    'Kottayam',
+    'Alappuzha',
+    'Pathanamthitta',
+    'Kollam',
+    'Thiruvananthapuram',
+    'Kasaragod',
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mosquesAsync = ref.watch(searchedMosquesProvider);
     final selectedMosque = ref.watch(selectedMosqueProvider);
+    final selectedDistrict = ref.watch(selectedDistrictFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kerala Mosques'),
+        title: const Text('Kerala Mosques Directory'),
       ),
       body: Column(
         children: [
           // Search Bar
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search mosque name or locality...',
+                hintText: 'Search mosque name, palli, or town...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -38,6 +57,40 @@ class MosquesScreen extends ConsumerWidget {
               },
             ),
           ),
+
+          // District Filter Chips
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _districts.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final dist = _districts[index];
+                final isSelected = selectedDistrict == dist;
+                return ChoiceChip(
+                  label: Text(dist),
+                  selected: isSelected,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: isSelected ? Colors.white : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      ref.read(selectedDistrictFilterProvider.notifier).state =
+                          dist;
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+
           Expanded(
             child: mosquesAsync.when(
               data: (mosques) {
@@ -45,12 +98,12 @@ class MosquesScreen extends ConsumerWidget {
                   return const EmptyStateView(
                     icon: Icons.mosque_outlined,
                     title: 'No Mosques Found',
-                    subtitle: 'Try adjusting your search query or location.',
+                    subtitle: 'Try adjusting your search query or district filter.',
                   );
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
                   itemCount: mosques.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -69,7 +122,7 @@ class MosquesScreen extends ConsumerWidget {
                         ),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.all(14),
                         leading: CircleAvatar(
                           backgroundColor: isSelected
                               ? AppColors.primary
@@ -88,52 +141,52 @@ class MosquesScreen extends ConsumerWidget {
                           children: [
                             if (mosque.address != null) ...[
                               const SizedBox(height: 4),
-                              Text(mosque.address!),
+                              Text(
+                                mosque.address!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 const Icon(Icons.near_me,
-                                    size: 14, color: AppColors.secondaryDark),
+                                    size: 13, color: AppColors.secondaryDark),
                                 const SizedBox(width: 4),
                                 Text(
                                   mosque.formattedDistance.isNotEmpty
                                       ? mosque.formattedDistance
-                                      : '${mosque.district}, Kerala',
+                                      : 'Nearby',
                                   style: const TextStyle(
-                                    color: AppColors.secondaryDark,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
+                                    color: AppColors.secondaryDark,
                                   ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  mosque.district,
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.grey),
                                 ),
                               ],
                             ),
                           ],
                         ),
-                        trailing: ElevatedButton(
-                          onPressed: () {
-                            ref.read(selectedMosqueProvider.notifier).state =
-                                mosque;
-                            context.push('/mosques/${mosque.id}');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isSelected
-                                ? AppColors.success
-                                : AppColors.primary,
-                            minimumSize: const Size(70, 36),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                          ),
-                          child: Text(
-                            isSelected ? 'Selected' : 'View',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () {
+                          ref.read(selectedMosqueProvider.notifier).state = mosque;
+                          context.push('/mosques/${mosque.id}');
+                        },
                       ),
                     );
                   },
                 );
               },
-              loading: () => const AppLoadingIndicator(),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              loading: () => const Center(child: AppLoadingIndicator()),
+              error: (err, stack) => Center(
+                child: Text('Error loading mosques: $err'),
+              ),
             ),
           ),
         ],

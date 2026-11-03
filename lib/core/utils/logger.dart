@@ -19,6 +19,21 @@ class AppLogger {
     );
   }
 
+  static void warning(
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+    String? tag,
+  }) {
+    developer.log(
+      message,
+      name: tag ?? 'SalahNear:WARN',
+      level: 900,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
   static void error(
     String message, {
     Object? error,

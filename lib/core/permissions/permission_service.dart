@@ -1,5 +1,10 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../utils/logger.dart';
+
+final permissionServiceProvider = Provider<PermissionService>((ref) {
+  return PermissionService();
+});
 
 class PermissionService {
   Future<bool> requestLocationPermission() async {

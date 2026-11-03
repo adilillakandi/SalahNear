@@ -9,5 +9,12 @@ abstract class MosqueRepository {
 
   Future<MosqueEntity?> getMosqueById(String id);
 
-  Future<List<MosqueEntity>> searchMosques(String query);
+  Future<List<MosqueEntity>> searchMosques(String query, {String? district});
+
+  Future<Map<String, String>> getMosqueIqamahSchedule(String mosqueId);
+
+  Future<bool> updateMosqueIqamahSchedule({
+    required String mosqueId,
+    required Map<String, String> iqamahTimes,
+  });
 }
