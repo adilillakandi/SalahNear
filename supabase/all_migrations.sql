@@ -547,11 +547,7 @@ begin
   );
 
   if v_distance_m <= (v_mosque.attendance_radius_m + coalesce(v_evidence.device_accuracy_m, 20.0)) then
-    if v_attendance.prayer_type = 'fajr' then
-      v_points := 25;
-    else
-      v_points := 20;
-    end if;
+    v_points := 5; -- 5 points per verified congregational prayer as per specification
 
     update public.attendance
     set status = 'verified',
@@ -634,6 +630,108 @@ begin
   end if;
 end;
 $$;
+
+-- PostGIS Distance Calculation RPC
+create or replace function public.calculate_distance_m(
+  mosque_id uuid,
+  user_lat double precision,
+  user_lng double precision
+)
+returns double precision
+language sql
+stable
+security definer
+as $$
+  select extensions.st_distance(
+    m.location,
+    extensions.st_setsrid(extensions.st_makepoint(user_lng, user_lat), 4326)::extensions.geography
+  )
+  from public.mosques m
+  where m.id = mosque_id;
+$$;
+
+-- Increment User Streak RPC
+create or replace function public.increment_user_streak(
+  target_user_id uuid,
+  attendance_date date
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  insert into public.user_streaks (user_id, current_streak, longest_streak, last_attendance_date, updated_at)
+  values (target_user_id, 1, 1, attendance_date, now())
+  on conflict (user_id) do update set
+    current_streak = case
+      when user_streaks.last_attendance_date = attendance_date then user_streaks.current_streak
+      when user_streaks.last_attendance_date = (attendance_date - interval '1 day')::date then user_streaks.current_streak + 1
+      else 1
+    end,
+    longest_streak = greatest(
+      user_streaks.longest_streak,
+      case
+        when user_streaks.last_attendance_date = (attendance_date - interval '1 day')::date then user_streaks.current_streak + 1
+        else 1
+      end
+    ),
+    last_attendance_date = attendance_date,
+    updated_at = now();
+end;
+$$;
+
+-- Match Friend Encounters RPC
+create or replace function public.match_friend_encounters(
+  current_attendance_id uuid
+)
+returns void
+language plpgsql
+security definer
+as $$
+declare
+  v_att public.attendance%rowtype;
+  v_friend record;
+begin
+  select * into v_att from public.attendance where id = current_attendance_id;
+  if not found or v_att.status <> 'verified' then
+    return;
+  end if;
+
+  for v_friend in
+    select a.id as friend_attendance_id, a.user_id as friend_user_id
+    from public.attendance a
+    join public.friendships f
+      on (f.requester_id = v_att.user_id and f.receiver_id = a.user_id)
+      or (f.receiver_id = v_att.user_id and f.requester_id = a.user_id)
+    where f.status = 'accepted'
+      and a.mosque_id = v_att.mosque_id
+      and a.prayer_date = v_att.prayer_date
+      and a.prayer_type = v_att.prayer_type
+      and a.status = 'verified'
+      and a.user_id <> v_att.user_id
+  loop
+    insert into public.friend_encounters (
+      user_low_id, user_high_id, mosque_id, prayer_type, prayer_date, attendance_low_id, attendance_high_id
+    )
+    values (
+      least(v_att.user_id, v_friend.friend_user_id),
+      greatest(v_att.user_id, v_friend.friend_user_id),
+      v_att.mosque_id,
+      v_att.prayer_type,
+      v_att.prayer_date,
+      case when v_att.user_id < v_friend.friend_user_id then current_attendance_id else v_friend.friend_attendance_id end,
+      case when v_att.user_id > v_friend.friend_user_id then current_attendance_id else v_friend.friend_attendance_id end
+    )
+    on conflict do nothing;
+  end loop;
+end;
+$$;
+
+-- Schema Permissions & Grants
+grant usage on schema public, extensions to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all routines in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
 
 -- 17. INITIAL SEED MOSQUES FOR KERALA
 insert into public.mosques (
