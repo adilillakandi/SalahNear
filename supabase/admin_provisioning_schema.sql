@@ -413,3 +413,4 @@ UPDATE public.user_roles
 SET is_active = true, updated_at = now()
 WHERE user_id = '<USER_UUID>';
 */
+

@@ -217,8 +217,10 @@ export default function PrayerSchedulesPage() {
           asr_iqamah: `${asrIqamah}:00`,
           maghrib_iqamah: `${maghribIqamah}:00`,
           isha_iqamah: `${ishaIqamah}:00`,
-          source_type: 'admin',
+          jummah_iqamah: `${jummahIqamah || '12:45'}:00`,
+          source_type: 'verified_mosque',
           version: newVersion,
+          updated_at: new Date().toISOString(),
         },
         { onConflict: 'mosque_id,prayer_date' }
       );
@@ -236,6 +238,7 @@ export default function PrayerSchedulesPage() {
           asr: asrIqamah,
           maghrib: maghribIqamah,
           isha: ishaIqamah,
+          jummah: jummahIqamah,
           version: newVersion,
         },
       });
