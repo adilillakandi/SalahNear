@@ -328,3 +328,4 @@ WHERE id = '<EVENT_UUID>';
 DELETE FROM public.mosque_events
 WHERE id = '<EVENT_UUID>';
 */
+

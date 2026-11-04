@@ -467,17 +467,6 @@ export default function MosqueEventsPage() {
                         Cancelled
                       </span>
                     )}
-
-                    {/* Delete Event Trash Button */}
-                    <button
-                      type="button"
-                      onClick={() => openConfirmModal('delete', evt)}
-                      title="Delete event"
-                      aria-label="Delete Event"
-                      className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 </div>
 
@@ -526,7 +515,7 @@ export default function MosqueEventsPage() {
                   )}
 
                   {evt.status === 'completed' && (
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
                       <span className="text-xs font-semibold text-blue-700 flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-blue-600" />
                         Event Completed
@@ -542,7 +531,7 @@ export default function MosqueEventsPage() {
                   )}
 
                   {evt.status === 'cancelled' && (
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
                       <span className="text-xs font-semibold text-red-600 flex items-center gap-1">
                         <XCircle className="w-4 h-4" />
                         Event Cancelled
@@ -557,17 +546,16 @@ export default function MosqueEventsPage() {
                     </div>
                   )}
 
-                  {evt.status === 'published' && (
-                    <button
-                      type="button"
-                      onClick={() => openConfirmModal('delete', evt)}
-                      title="Delete event"
-                      aria-label="Delete Event"
-                      className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors ml-auto"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  {/* Single Bottom Trash Button for all statuses */}
+                  <button
+                    type="button"
+                    onClick={() => openConfirmModal('delete', evt)}
+                    title="Delete event"
+                    aria-label="Delete Event"
+                    className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors ml-auto"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
