@@ -59,9 +59,13 @@ create table if not exists public.user_streaks (
 );
 
 -- 4. REAL-TIME LEADERBOARD VIEW (WITH TIE-BREAKING & MODERATION FILTERS)
-create or replace view public.leaderboard_view as
+-- Drop prior view definition if column names differ
+drop view if exists public.leaderboard_view cascade;
+
+create view public.leaderboard_view as
 select
   p.id as user_id,
+  p.full_name as display_name,
   p.full_name,
   p.username,
   p.avatar_url,
@@ -69,6 +73,7 @@ select
   p.state,
   p.account_status,
   p.is_leaderboard_hidden,
+  m.name as mosque_name,
   m.name as home_mosque_name,
   coalesce(s.current_streak, 0) as current_streak,
   coalesce(s.longest_streak, 0) as longest_streak,
@@ -358,3 +363,4 @@ SELECT public.moderate_user_account(
   'GPS spoofing investigation pending'
 );
 */
+
