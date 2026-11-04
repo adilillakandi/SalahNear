@@ -143,6 +143,28 @@ export default function UsersModerationPage() {
 
   const fetchUsers = async () => {
     try {
+      // 1. Try querying real-time leaderboard view first
+      const { data: lbData, error: lbError } = await supabase
+        .from('leaderboard_view')
+        .select('*')
+        .order('total_points', { ascending: false });
+
+      if (!lbError && lbData && lbData.length > 0) {
+        const mapped: UserRecord[] = lbData.map((d: any) => ({
+          id: d.user_id,
+          full_name: d.full_name || 'Congregant',
+          username: d.username || 'user',
+          district: d.district || 'Kerala',
+          total_points: Number(d.total_points) || 0,
+          streak_count: Number(d.current_streak) || 0,
+          role: 'congregant',
+          created_at: new Date().toISOString(),
+        }));
+        setUsers(mapped);
+        return;
+      }
+
+      // 2. Fallback to profiles query
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -181,18 +203,19 @@ export default function UsersModerationPage() {
     const newTotal = Math.max(0, selectedUser.total_points + delta);
 
     try {
-      // Insert to user_points
+      // Insert to user_points ledger
       await supabase.from('user_points').insert({
         user_id: selectedUser.id,
         points: delta,
         activity_type: delta < 0 ? 'admin_penalty' : 'admin_adjustment',
+        reason: reason,
         notes: reason,
       });
 
       // Audit log
       await supabase.from('audit_logs').insert({
         actor_name: 'Super Admin',
-        action: 'POINTS_ADJUSTMENT',
+        action: delta < 0 ? 'POINTS_DEDUCTED' : 'POINTS_AWARDED',
         target_table: 'user_points',
         target_id: selectedUser.id,
         changes: {
