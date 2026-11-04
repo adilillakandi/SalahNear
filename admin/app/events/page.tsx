@@ -21,42 +21,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-const INITIAL_EVENTS: MosqueEvent[] = [
-  {
-    id: 'evt_1',
-    mosque_id: 'm1',
-    mosque_name: 'Mishkal Mosque, Kuttichira',
-    title: 'Friday Jummah Special Khutbah Series',
-    description: 'Weekly reflection on Islamic Ethics in Community Living delivered by Imam Rashid Moulavi.',
-    event_date: '2026-11-07T12:30:00+05:30',
-    venue: 'Main Prayer Hall & Courtyard',
-    status: 'published',
-    created_at: '2026-11-01T10:00:00Z',
-  },
-  {
-    id: 'evt_2',
-    mosque_id: 'm1',
-    mosque_name: 'Mishkal Mosque, Kuttichira',
-    title: 'Community Fajr Awakening & Breakfast',
-    description: 'Congregational Fajr prayer followed by collective remembrance, youth mentoring circle, and traditional breakfast.',
-    event_date: '2026-11-08T05:20:00+05:30',
-    venue: 'Mishkal Madrasa Hall',
-    status: 'published',
-    created_at: '2026-11-02T12:00:00Z',
-  },
-  {
-    id: 'evt_3',
-    mosque_id: 'm4',
-    mosque_name: 'Cheraman Juma Masjid, Kodungallur',
-    title: 'Historic Heritage Exhibition & Lecture',
-    description: 'Exhibition exploring the 1400-year history of Islam in Kerala and the founding of the Cheraman Mosque.',
-    event_date: '2026-11-15T16:00:00+05:30',
-    venue: 'Cheraman Islamic Heritage Museum',
-    status: 'published',
-    created_at: '2026-11-03T14:00:00Z',
-  },
-];
-
 type ConfirmActionType = 'complete' | 'cancel' | 'reopen' | 'reactivate' | 'delete';
 
 interface ConfirmModalState {
@@ -67,7 +31,7 @@ interface ConfirmModalState {
 
 export default function MosqueEventsPage() {
   const { role } = useAdminAuth();
-  const [events, setEvents] = useState<MosqueEvent[]>(INITIAL_EVENTS);
+  const [events, setEvents] = useState<MosqueEvent[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'completed' | 'cancelled'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -83,23 +47,25 @@ export default function MosqueEventsPage() {
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [mosqueName, setMosqueName] = useState('Mishkal Mosque, Kuttichira');
-  const [mosqueId, setMosqueId] = useState('m1');
-  const [eventDate, setEventDate] = useState('2026-11-10T18:00');
+  const [mosqueName, setMosqueName] = useState('');
+  const [mosqueId, setMosqueId] = useState('');
+  const [eventDate, setEventDate] = useState('');
   const [venue, setVenue] = useState('Main Prayer Hall');
-  const [availableMosques, setAvailableMosques] = useState<{ id: string; name: string }[]>([
-    { id: 'm1', name: 'Mishkal Mosque, Kuttichira' },
-    { id: 'm2', name: 'Palayam Juma Masjid, Thiruvananthapuram' },
-    { id: 'm3', name: 'Thazhathangady Juma Masjid, Kottayam' },
-    { id: 'm4', name: 'Cheraman Juma Masjid, Kodungallur' },
-  ]);
+  const [availableMosques, setAvailableMosques] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    // Load local storage cache if available
+    // Load local storage cache if available, purging any old mock data
     try {
       const saved = localStorage.getItem('salahnear_mosque_events');
       if (saved) {
-        setEvents(JSON.parse(saved));
+        const parsed: MosqueEvent[] = JSON.parse(saved);
+        const realEvents = parsed.filter(
+          (e) => e.id !== 'evt_1' && e.id !== 'evt_2' && e.id !== 'evt_3'
+        );
+        if (realEvents.length !== parsed.length) {
+          localStorage.setItem('salahnear_mosque_events', JSON.stringify(realEvents));
+        }
+        setEvents(realEvents);
       }
     } catch {
       // Ignore
@@ -121,7 +87,7 @@ export default function MosqueEventsPage() {
         setMosqueName(data[0].name);
       }
     } catch {
-      // Fallback to initial
+      // Fallback
     }
   };
 
@@ -142,7 +108,7 @@ export default function MosqueEventsPage() {
         `)
         .order('event_date', { ascending: true });
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const mapped: MosqueEvent[] = data.map((d: any) => ({
           id: d.id,
           mosque_id: d.mosque_id,
@@ -155,9 +121,14 @@ export default function MosqueEventsPage() {
           created_at: d.created_at,
         }));
         setEvents(mapped);
+        try {
+          localStorage.setItem('salahnear_mosque_events', JSON.stringify(mapped));
+        } catch {
+          // Ignore
+        }
       }
     } catch {
-      // Fallback to cache/initial
+      // Fallback
     }
   };
 
@@ -274,12 +245,31 @@ export default function MosqueEventsPage() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
+  const openCreateModal = () => {
+    setTitle('');
+    setDescription('');
+    setVenue('Main Prayer Hall');
+    // Set default date to upcoming Saturday or tomorrow 10:00 AM
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    const localIso = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    setEventDate(localIso);
+    setShowCreateModal(true);
+  };
+
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    const selectedMosque = availableMosques.find((m) => m.id === mosqueId);
+    const currentMosqueName = selectedMosque?.name || mosqueName || 'Local Mosque';
+
+    const tempId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `evt_${Date.now()}`;
     const newEvent: MosqueEvent = {
-      id: `evt_${Date.now()}`,
-      mosque_id: mosqueId,
-      mosque_name: mosqueName,
+      id: tempId,
+      mosque_id: mosqueId || tempId,
+      mosque_name: currentMosqueName,
       title,
       description,
       event_date: eventDate,
@@ -299,20 +289,33 @@ export default function MosqueEventsPage() {
     });
 
     try {
-      await supabase.from('mosque_events').insert({
-        mosque_id: mosqueId.startsWith('m') ? 'a1111111-1111-1111-1111-111111111111' : mosqueId,
+      const insertPayload: Record<string, any> = {
         title,
         description,
         event_date: new Date(eventDate).toISOString(),
         venue,
         status: 'published',
-      });
+      };
+      if (mosqueId) {
+        insertPayload.mosque_id = mosqueId;
+      }
+
+      const { data, error } = await supabase
+        .from('mosque_events')
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (!error && data) {
+        newEvent.id = data.id;
+      }
+
       await supabase.from('audit_logs').insert({
         actor_name: role.toUpperCase(),
         action: 'MOSQUE_EVENT_CREATED',
         target_table: 'mosque_events',
         target_id: newEvent.id,
-        changes: { title, mosqueName, eventDate },
+        changes: { title, mosqueName: currentMosqueName, eventDate },
       });
     } catch {
       // Fallback
@@ -321,7 +324,7 @@ export default function MosqueEventsPage() {
     setShowCreateModal(false);
     setTitle('');
     setDescription('');
-    setFeedback({ type: 'success', text: `Event "${title}" published for ${mosqueName}.` });
+    setFeedback({ type: 'success', text: `Event "${title}" published.` });
     setTimeout(() => setFeedback(null), 4000);
   };
 
@@ -374,7 +377,7 @@ export default function MosqueEventsPage() {
         </div>
 
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-sm transition-colors gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -424,8 +427,24 @@ export default function MosqueEventsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredEvents.length === 0 ? (
           <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
-            <CalendarDays className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-            No mosque events match your filter.
+            <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <CalendarDays className="w-6 h-6 text-slate-400" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-800 mb-1">
+              {search || statusFilter !== 'all' ? 'No Matching Events' : 'No Mosque Events Yet'}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mb-5">
+              {search || statusFilter !== 'all'
+                ? 'No events match your search query or filter. Try clearing filters.'
+                : 'There are currently no events. Schedule and publish your first congregational event, Friday Khutbah, or community gathering.'}
+            </p>
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm transition-colors gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Create Mosque Event
+            </button>
           </div>
         ) : (
           filteredEvents.map((evt) => (
@@ -705,21 +724,32 @@ export default function MosqueEventsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Mosque</label>
-                <select
-                  value={mosqueId}
-                  onChange={(e) => {
-                    const sel = availableMosques.find((m) => m.id === e.target.value);
-                    setMosqueId(e.target.value);
-                    if (sel) setMosqueName(sel.name);
-                  }}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
-                >
-                  {availableMosques.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                {availableMosques.length > 0 ? (
+                  <select
+                    value={mosqueId}
+                    onChange={(e) => {
+                      const sel = availableMosques.find((m) => m.id === e.target.value);
+                      setMosqueId(e.target.value);
+                      if (sel) setMosqueName(sel.name);
+                    }}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
+                  >
+                    {availableMosques.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Mishkal Mosque"
+                    value={mosqueName}
+                    onChange={(e) => setMosqueName(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
