@@ -17,6 +17,8 @@ import {
   AlertCircle,
   RotateCcw,
   Sparkles,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 const INITIAL_EVENTS: MosqueEvent[] = [
@@ -55,6 +57,14 @@ const INITIAL_EVENTS: MosqueEvent[] = [
   },
 ];
 
+type ConfirmActionType = 'complete' | 'cancel' | 'reopen' | 'reactivate' | 'delete';
+
+interface ConfirmModalState {
+  isOpen: boolean;
+  action: ConfirmActionType;
+  event: MosqueEvent | null;
+}
+
 export default function MosqueEventsPage() {
   const { role } = useAdminAuth();
   const [events, setEvents] = useState<MosqueEvent[]>(INITIAL_EVENTS);
@@ -63,12 +73,26 @@ export default function MosqueEventsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Confirmation Dialog State
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
+    isOpen: false,
+    action: 'complete',
+    event: null,
+  });
+
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [mosqueName, setMosqueName] = useState('Mishkal Mosque, Kuttichira');
+  const [mosqueId, setMosqueId] = useState('m1');
   const [eventDate, setEventDate] = useState('2026-11-10T18:00');
   const [venue, setVenue] = useState('Main Prayer Hall');
+  const [availableMosques, setAvailableMosques] = useState<{ id: string; name: string }[]>([
+    { id: 'm1', name: 'Mishkal Mosque, Kuttichira' },
+    { id: 'm2', name: 'Palayam Juma Masjid, Thiruvananthapuram' },
+    { id: 'm3', name: 'Thazhathangady Juma Masjid, Kottayam' },
+    { id: 'm4', name: 'Cheraman Juma Masjid, Kodungallur' },
+  ]);
 
   useEffect(() => {
     // Load local storage cache if available
@@ -81,7 +105,25 @@ export default function MosqueEventsPage() {
       // Ignore
     }
     fetchEvents();
+    fetchMosques();
   }, []);
+
+  const fetchMosques = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('mosques')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        setAvailableMosques(data);
+        setMosqueId(data[0].id);
+        setMosqueName(data[0].name);
+      }
+    } catch {
+      // Fallback to initial
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -115,12 +157,52 @@ export default function MosqueEventsPage() {
         setEvents(mapped);
       }
     } catch {
-      // Fallback
+      // Fallback to cache/initial
     }
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: MosqueEvent['status']) => {
-    // 1. Immediately update UI state & cache
+  // Open confirmation modal for any action
+  const openConfirmModal = (action: ConfirmActionType, event: MosqueEvent) => {
+    setConfirmModal({
+      isOpen: true,
+      action,
+      event,
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      isOpen: false,
+      action: 'complete',
+      event: null,
+    });
+  };
+
+  // Handler for confirmed dialog action
+  const handleConfirmAction = async () => {
+    const { action, event } = confirmModal;
+    if (!event) return;
+
+    closeConfirmModal();
+
+    if (action === 'delete') {
+      await executeDeleteEvent(event);
+    } else if (action === 'complete') {
+      await executeUpdateStatus(event.id, 'completed', 'Marked as COMPLETED');
+    } else if (action === 'cancel') {
+      await executeUpdateStatus(event.id, 'cancelled', 'Event CANCELLED');
+    } else if (action === 'reopen' || action === 'reactivate') {
+      await executeUpdateStatus(
+        event.id,
+        'published',
+        action === 'reopen' ? 'Event RE-OPENED to Published' : 'Event REACTIVATED to Published'
+      );
+    }
+  };
+
+  // Status transition execution
+  const executeUpdateStatus = async (id: string, newStatus: MosqueEvent['status'], feedbackMsg: string) => {
+    // 1. Update UI state & local cache
     setEvents((prev) => {
       const updated = prev.map((e) => (e.id === id ? { ...e, status: newStatus } : e));
       try {
@@ -131,7 +213,7 @@ export default function MosqueEventsPage() {
       return updated;
     });
 
-    // 2. Persist to Supabase if database table exists
+    // 2. Persist to Supabase
     try {
       await supabase
         .from('mosque_events')
@@ -147,17 +229,47 @@ export default function MosqueEventsPage() {
         changes: { status: newStatus },
       });
     } catch {
-      // State is already updated locally
+      // Offline fallback
     }
 
     setFeedback({
       type: 'success',
-      text:
-        newStatus === 'completed'
-          ? 'Event marked as COMPLETED.'
-          : newStatus === 'cancelled'
-          ? 'Event has been CANCELLED.'
-          : 'Event restored to PUBLISHED.',
+      text: feedbackMsg,
+    });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  // Delete event execution
+  const executeDeleteEvent = async (event: MosqueEvent) => {
+    // 1. Update UI state & local cache
+    setEvents((prev) => {
+      const updated = prev.filter((e) => e.id !== event.id);
+      try {
+        localStorage.setItem('salahnear_mosque_events', JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+
+    // 2. Persist to Supabase
+    try {
+      await supabase.from('mosque_events').delete().eq('id', event.id);
+
+      await supabase.from('audit_logs').insert({
+        actor_name: role.toUpperCase(),
+        action: 'MOSQUE_EVENT_DELETED',
+        target_table: 'mosque_events',
+        target_id: event.id,
+        changes: { title: event.title, mosque: event.mosque_name },
+      });
+    } catch {
+      // Offline fallback
+    }
+
+    setFeedback({
+      type: 'success',
+      text: `Event "${event.title}" has been permanently deleted.`,
     });
     setTimeout(() => setFeedback(null), 3500);
   };
@@ -166,7 +278,7 @@ export default function MosqueEventsPage() {
     e.preventDefault();
     const newEvent: MosqueEvent = {
       id: `evt_${Date.now()}`,
-      mosque_id: 'm1',
+      mosque_id: mosqueId,
       mosque_name: mosqueName,
       title,
       description,
@@ -188,7 +300,7 @@ export default function MosqueEventsPage() {
 
     try {
       await supabase.from('mosque_events').insert({
-        mosque_id: 'a1111111-1111-1111-1111-111111111111',
+        mosque_id: mosqueId.startsWith('m') ? 'a1111111-1111-1111-1111-111111111111' : mosqueId,
         title,
         description,
         event_date: new Date(eventDate).toISOString(),
@@ -196,7 +308,7 @@ export default function MosqueEventsPage() {
         status: 'published',
       });
       await supabase.from('audit_logs').insert({
-        actor_name: 'Mosque Administrator',
+        actor_name: role.toUpperCase(),
         action: 'MOSQUE_EVENT_CREATED',
         target_table: 'mosque_events',
         target_id: newEvent.id,
@@ -319,41 +431,54 @@ export default function MosqueEventsPage() {
           filteredEvents.map((evt) => (
             <div
               key={evt.id}
-              className={`bg-white rounded-2xl border p-5 flex flex-col justify-between shadow-sm transition-all ${
+              className={`bg-white rounded-2xl border p-5 flex flex-col justify-between shadow-sm transition-all hover:shadow-md ${
                 evt.status === 'completed'
-                  ? 'border-emerald-300/80 bg-emerald-50/10'
+                  ? 'border-blue-200 bg-blue-50/10'
                   : evt.status === 'cancelled'
-                  ? 'border-red-200 bg-red-50/10 opacity-75'
+                  ? 'border-red-200 bg-red-50/10 opacity-80'
                   : 'border-slate-200 hover:border-emerald-500/40'
               }`}
             >
               <div>
-                {/* Header badges */}
-                <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <Building2 className="w-3 h-3 mr-1" />
-                    {evt.mosque_name}
+                {/* Header badges & Actions */}
+                <div className="flex items-center justify-between mb-3 gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 truncate max-w-[200px]">
+                    <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">{evt.mosque_name}</span>
                   </span>
 
-                  {/* Status Badge */}
-                  {evt.status === 'published' && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wide">
-                      <Sparkles className="w-3 h-3 mr-1 text-emerald-600" />
-                      Published
-                    </span>
-                  )}
-                  {evt.status === 'completed' && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wide">
-                      <CheckCircle2 className="w-3 h-3 mr-1 text-blue-600" />
-                      Completed
-                    </span>
-                  )}
-                  {evt.status === 'cancelled' && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200 uppercase tracking-wide">
-                      <XCircle className="w-3 h-3 mr-1 text-red-600" />
-                      Cancelled
-                    </span>
-                  )}
+                  <div className="flex items-center space-x-1.5 flex-shrink-0">
+                    {/* Status Badge */}
+                    {evt.status === 'published' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wide">
+                        <Sparkles className="w-3 h-3 mr-1 text-emerald-600" />
+                        Published
+                      </span>
+                    )}
+                    {evt.status === 'completed' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wide">
+                        <CheckCircle2 className="w-3 h-3 mr-1 text-blue-600" />
+                        Completed
+                      </span>
+                    )}
+                    {evt.status === 'cancelled' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200 uppercase tracking-wide">
+                        <XCircle className="w-3 h-3 mr-1 text-red-600" />
+                        Cancelled
+                      </span>
+                    )}
+
+                    {/* Delete Event Trash Button */}
+                    <button
+                      type="button"
+                      onClick={() => openConfirmModal('delete', evt)}
+                      title="Delete event"
+                      aria-label="Delete Event"
+                      className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <h3
@@ -380,34 +505,34 @@ export default function MosqueEventsPage() {
                 )}
 
                 {/* Status action buttons */}
-                <div className="pt-2 flex items-center justify-end space-x-2">
+                <div className="pt-2 flex items-center justify-between gap-2">
                   {evt.status === 'published' && (
-                    <>
+                    <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => handleUpdateStatus(evt.id, 'completed')}
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-colors"
+                        onClick={() => openConfirmModal('complete', evt)}
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-colors shadow-sm"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Mark Completed</span>
                       </button>
                       <button
-                        onClick={() => handleUpdateStatus(evt.id, 'cancelled')}
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-semibold transition-colors"
+                        onClick={() => openConfirmModal('cancel', evt)}
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-semibold transition-colors shadow-sm"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         <span>Cancel Event</span>
                       </button>
-                    </>
+                    </div>
                   )}
 
                   {evt.status === 'completed' && (
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
                         Event Completed
                       </span>
                       <button
-                        onClick={() => handleUpdateStatus(evt.id, 'published')}
+                        onClick={() => openConfirmModal('reopen', evt)}
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-[11px] font-medium text-slate-600 transition-colors"
                       >
                         <RotateCcw className="w-3 h-3 mr-0.5" />
@@ -423,7 +548,7 @@ export default function MosqueEventsPage() {
                         Event Cancelled
                       </span>
                       <button
-                        onClick={() => handleUpdateStatus(evt.id, 'published')}
+                        onClick={() => openConfirmModal('reactivate', evt)}
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-[11px] font-medium text-slate-600 transition-colors"
                       >
                         <RotateCcw className="w-3 h-3 mr-0.5" />
@@ -431,12 +556,128 @@ export default function MosqueEventsPage() {
                       </button>
                     </div>
                   )}
+
+                  {evt.status === 'published' && (
+                    <button
+                      type="button"
+                      onClick={() => openConfirmModal('delete', evt)}
+                      title="Delete event"
+                      aria-label="Delete Event"
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors ml-auto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Confirmation Dialog Modal */}
+      {confirmModal.isOpen && confirmModal.event && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-start space-x-3 mb-4">
+              {confirmModal.action === 'delete' && (
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+              )}
+              {confirmModal.action === 'cancel' && (
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+              )}
+              {confirmModal.action === 'complete' && (
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+              )}
+              {(confirmModal.action === 'reopen' || confirmModal.action === 'reactivate') && (
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+              )}
+
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {confirmModal.action === 'delete' && 'Permanently Delete Event?'}
+                  {confirmModal.action === 'cancel' && 'Cancel Mosque Event?'}
+                  {confirmModal.action === 'complete' && 'Mark Event as Completed?'}
+                  {confirmModal.action === 'reopen' && 'Re-open Completed Event?'}
+                  {confirmModal.action === 'reactivate' && 'Reactivate Cancelled Event?'}
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  {confirmModal.action === 'delete' && (
+                    <>
+                      Are you sure you want to permanently delete{' '}
+                      <span className="font-semibold text-slate-900">"{confirmModal.event.title}"</span>?
+                      This will remove it from the system and attendees. This action cannot be undone.
+                    </>
+                  )}
+                  {confirmModal.action === 'cancel' && (
+                    <>
+                      Are you sure you want to cancel{' '}
+                      <span className="font-semibold text-slate-900">"{confirmModal.event.title}"</span>?
+                      The event will be marked as Cancelled on community schedules.
+                    </>
+                  )}
+                  {confirmModal.action === 'complete' && (
+                    <>
+                      Are you sure you want to mark{' '}
+                      <span className="font-semibold text-slate-900">"{confirmModal.event.title}"</span> as completed?
+                      Attendees will see that this congregation has concluded.
+                    </>
+                  )}
+                  {confirmModal.action === 'reopen' && (
+                    <>
+                      Are you sure you want to re-open{' '}
+                      <span className="font-semibold text-slate-900">"{confirmModal.event.title}"</span>?
+                      It will be restored back to Published status.
+                    </>
+                  )}
+                  {confirmModal.action === 'reactivate' && (
+                    <>
+                      Are you sure you want to reactivate{' '}
+                      <span className="font-semibold text-slate-900">"{confirmModal.event.title}"</span>?
+                      It will be restored back to Published status.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={closeConfirmModal}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                No, Keep It
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-sm transition-colors ${
+                  confirmModal.action === 'delete'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : confirmModal.action === 'cancel'
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {confirmModal.action === 'delete' && 'Yes, Delete Event'}
+                {confirmModal.action === 'cancel' && 'Yes, Cancel Event'}
+                {confirmModal.action === 'complete' && 'Yes, Mark Completed'}
+                {confirmModal.action === 'reopen' && 'Yes, Re-open Event'}
+                {confirmModal.action === 'reactivate' && 'Yes, Reactivate Event'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Event Modal */}
       {showCreateModal && (
@@ -475,14 +716,22 @@ export default function MosqueEventsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Mosque Venue</label>
-                <input
-                  type="text"
-                  required
-                  value={mosqueName}
-                  onChange={(e) => setMosqueName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Mosque</label>
+                <select
+                  value={mosqueId}
+                  onChange={(e) => {
+                    const sel = availableMosques.find((m) => m.id === e.target.value);
+                    setMosqueId(e.target.value);
+                    if (sel) setMosqueName(sel.name);
+                  }}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
+                >
+                  {availableMosques.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
