@@ -29,3 +29,4 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
     </div>
   );
 }
+

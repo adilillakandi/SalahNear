@@ -472,7 +472,7 @@ export default function AdministratorsPage() {
               )}
 
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800">
-                Security Guarantee: Role and scope boundaries are enforced server-side via Supabase RLS and PostgreSQL check constraints.
+                Security Guarantee: Role and scope boundaries are enforced server-side via database security policies and check constraints.
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
@@ -497,3 +497,4 @@ export default function AdministratorsPage() {
     </div>
   );
 }
+

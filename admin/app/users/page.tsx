@@ -586,7 +586,7 @@ export default function UsersModerationPage() {
 
               <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 space-y-1 border border-slate-100">
                 <div className="font-semibold text-slate-800">RBAC Enforcement Note:</div>
-                <p>Role permissions are validated server-side in Supabase RLS policies and database constraints.</p>
+                <p>Role permissions are validated server-side in database policies and constraints.</p>
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">

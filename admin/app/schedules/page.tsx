@@ -265,7 +265,7 @@ export default function PrayerSchedulesPage() {
       });
       setTimeout(() => setToast(null), 4000);
     } catch {
-      setToast({ type: 'error', text: 'Failed to update schedule in Supabase.' });
+      setToast({ type: 'error', text: 'Failed to update schedule.' });
     }
   };
 

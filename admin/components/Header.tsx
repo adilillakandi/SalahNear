@@ -10,7 +10,6 @@ import {
   Shield,
   ChevronDown,
   Building2,
-  ExternalLink,
   Sparkles,
   CheckCircle2,
 } from 'lucide-react';
@@ -81,16 +80,6 @@ export default function Header() {
           )}
         </div>
 
-        {/* Supabase Dashboard link */}
-        <a
-          href="https://supabase.com/dashboard/project/vopcihpgfqborlwwimyx"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
-        >
-          <span>Supabase DB</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
 
         {/* Notifications */}
         <button

@@ -273,3 +273,4 @@ create policy "Admins manage support cases"
 grant all on public.announcements to anon, authenticated, service_role;
 grant all on public.mosque_events to anon, authenticated, service_role;
 grant all on public.support_cases to anon, authenticated, service_role;
+

@@ -222,7 +222,7 @@ export default function AttendanceReviewPage() {
       });
       setTimeout(() => setNotification(null), 4000);
     } catch {
-      setNotification({ type: 'error', text: 'Error applying decision to Supabase.' });
+      setNotification({ type: 'error', text: 'Error applying decision to server.' });
     }
   };
 

@@ -85,7 +85,7 @@ export default function LoginPage() {
           Sign in to your administrative account
         </h2>
         <p className="mt-1 text-center text-xs text-slate-400">
-          Protected by Supabase Auth, PostgreSQL PostGIS, and Server-Side RBAC
+          Protected by Enterprise-Grade Security and Server-Side RBAC
         </p>
       </div>
 
@@ -242,3 +242,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
