@@ -138,9 +138,9 @@ export default function Sidebar() {
       : 'Kerala State';
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800 min-h-screen">
+    <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800 h-screen sticky top-0 shrink-0 z-30 select-none">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800 flex items-center space-x-3">
+      <div className="p-5 border-b border-slate-800 flex items-center space-x-3 shrink-0">
         <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-900/50">
           <Building2 className="w-6 h-6" />
         </div>
@@ -153,7 +153,7 @@ export default function Sidebar() {
       </div>
 
       {/* Role Pill */}
-      <div className="mx-4 my-3 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-between text-xs">
+      <div className="mx-4 my-3 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-between text-xs shrink-0">
         <div className="flex items-center space-x-2">
           <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
           <div className="truncate">
@@ -193,8 +193,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer Info & Sign out */}
-      <div className="p-4 border-t border-slate-800 text-xs text-slate-400 space-y-3">
+      {/* Footer Info */}
+      <div className="p-4 border-t border-slate-800 text-xs text-slate-400 space-y-3 shrink-0">
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span>Timezone</span>

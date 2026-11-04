@@ -32,7 +32,7 @@ export default function Header() {
     .trim();
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20">
+    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0 sticky top-0">
       {/* Search Input */}
       <div className="flex items-center space-x-3 w-96">
         <div className="relative w-full">
