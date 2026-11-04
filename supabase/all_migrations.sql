@@ -842,4 +842,225 @@ insert into public.prayer_schedules (
 )
 on conflict (mosque_id, prayer_date) do nothing;
 
+-- 18. ADMIN SYSTEM EXTENSIONS & ANNOUNCEMENTS, EVENTS, SUPPORT
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'user_roles_role_check'
+  ) then
+    alter table public.user_roles drop constraint user_roles_role_check;
+  end if;
+end;
+$$;
+
+alter table public.user_roles add column if not exists state text default 'Kerala';
+alter table public.user_roles add column if not exists district text;
+alter table public.user_roles add column if not exists is_active boolean not null default true;
+alter table public.user_roles add column if not exists assigned_by uuid references public.profiles(id);
+alter table public.user_roles add column if not exists updated_at timestamptz not null default now();
+
+alter table public.user_roles add constraint user_roles_role_check check (
+  role in (
+    'super_admin',
+    'state_admin',
+    'district_admin',
+    'mosque_admin',
+    'attendance_reviewer',
+    'support_admin',
+    'reviewer',
+    'user'
+  )
+);
+
+create index if not exists user_roles_user_active_idx on public.user_roles(user_id, is_active);
+create index if not exists user_roles_role_district_idx on public.user_roles(role, district);
+
+-- Mosques extensions
+alter table public.mosques add column if not exists name_ml text;
+alter table public.mosques add column if not exists entrance_latitude double precision;
+alter table public.mosques add column if not exists entrance_longitude double precision;
+alter table public.mosques add column if not exists qr_checkin_enabled boolean not null default true;
+alter table public.mosques add column if not exists verification_notes text;
+
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'mosques_verification_status_check'
+  ) then
+    alter table public.mosques drop constraint mosques_verification_status_check;
+  end if;
+end;
+$$;
+
+alter table public.mosques add constraint mosques_verification_status_check check (
+  verification_status in (
+    'pending',
+    'under_review',
+    'verified',
+    'rejected',
+    'needs_correction',
+    'archived',
+    'inactive'
+  )
+);
+
+-- Prayer Schedules extensions
+alter table public.prayer_schedules add column if not exists effective_from date default current_date;
+alter table public.prayer_schedules add column if not exists effective_until date;
+alter table public.prayer_schedules add column if not exists jummah_iqamah time;
+alter table public.prayer_schedules add column if not exists change_reason text;
+alter table public.prayer_schedules add column if not exists updated_by uuid references public.profiles(id);
+alter table public.prayer_schedules add column if not exists updated_at timestamptz not null default now();
+
+-- Audit Logs extensions
+alter table public.audit_logs add column if not exists actor_name text;
+alter table public.audit_logs add column if not exists entity_type text;
+alter table public.audit_logs add column if not exists entity_id text;
+alter table public.audit_logs add column if not exists before_state jsonb;
+alter table public.audit_logs add column if not exists after_state jsonb;
+alter table public.audit_logs add column if not exists reason text;
+alter table public.audit_logs add column if not exists user_agent text;
+
+create index if not exists audit_logs_entity_idx on public.audit_logs(entity_type, entity_id);
+
+-- Announcements table
+create table if not exists public.announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  body text not null,
+  language text not null default 'en' check (language in ('en', 'ml', 'both')),
+  scope_type text not null check (scope_type in ('platform', 'state', 'district', 'mosque')),
+  scope_target text,
+  status text not null default 'published' check (status in ('draft', 'published', 'archived')),
+  published_at timestamptz default now(),
+  expires_at timestamptz,
+  send_push boolean not null default false,
+  author_id uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists announcements_scope_idx on public.announcements(scope_type, scope_target, status);
+create index if not exists announcements_published_idx on public.announcements(published_at desc);
+
+-- Mosque Events table
+create table if not exists public.mosque_events (
+  id uuid primary key default gen_random_uuid(),
+  mosque_id uuid not null references public.mosques(id) on delete cascade,
+  title text not null,
+  description text,
+  event_date timestamptz not null,
+  venue text,
+  image_url text,
+  status text not null default 'published' check (status in ('draft', 'published', 'cancelled', 'completed')),
+  created_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists mosque_events_mosque_idx on public.mosque_events(mosque_id, event_date);
+create index if not exists mosque_events_status_idx on public.mosque_events(status);
+
+-- Support Cases table
+create table if not exists public.support_cases (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id),
+  category text not null check (
+    category in (
+      'account_recovery',
+      'attendance_dispute',
+      'mosque_correction',
+      'mock_location',
+      'points_dispute',
+      'friend_dispute',
+      'general'
+    )
+  ),
+  title text not null,
+  description text not null,
+  status text not null default 'open' check (
+    status in ('open', 'in_progress', 'waiting_for_user', 'resolved', 'closed')
+  ),
+  assigned_to uuid references public.profiles(id),
+  internal_notes text,
+  resolution_summary text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists support_cases_user_idx on public.support_cases(user_id);
+create index if not exists support_cases_status_idx on public.support_cases(status, category);
+
+-- RLS for Admin extensions
+alter table public.announcements enable row level security;
+alter table public.mosque_events enable row level security;
+alter table public.support_cases enable row level security;
+
+drop policy if exists "Published announcements readable by everyone" on public.announcements;
+drop policy if exists "Admins manage announcements" on public.announcements;
+drop policy if exists "Public can view mosque events" on public.mosque_events;
+drop policy if exists "Admins manage mosque events" on public.mosque_events;
+drop policy if exists "Users view own support cases" on public.support_cases;
+drop policy if exists "Users create own support cases" on public.support_cases;
+drop policy if exists "Admins manage support cases" on public.support_cases;
+
+create policy "Published announcements readable by everyone"
+  on public.announcements for select to anon, authenticated
+  using (status = 'published');
+
+create policy "Admins manage announcements"
+  on public.announcements for all to authenticated
+  using (
+    exists (
+      select 1 from public.user_roles
+      where user_id = auth.uid()
+        and is_active = true
+        and role in ('super_admin', 'state_admin', 'district_admin', 'mosque_admin')
+    )
+  );
+
+create policy "Public can view mosque events"
+  on public.mosque_events for select to anon, authenticated
+  using (status in ('published', 'completed'));
+
+create policy "Admins manage mosque events"
+  on public.mosque_events for all to authenticated
+  using (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+        and ur.is_active = true
+        and (
+          ur.role = 'super_admin' or
+          exists (
+            select 1 from public.mosque_admins ma
+            where ma.user_id = auth.uid() and ma.mosque_id = mosque_events.mosque_id
+          )
+        )
+    )
+  );
+
+create policy "Users view own support cases"
+  on public.support_cases for select to authenticated
+  using (auth.uid() = user_id);
+
+create policy "Users create own support cases"
+  on public.support_cases for insert to authenticated
+  with check (auth.uid() = user_id);
+
+create policy "Admins manage support cases"
+  on public.support_cases for all to authenticated
+  using (
+    exists (
+      select 1 from public.user_roles
+      where user_id = auth.uid()
+        and is_active = true
+        and role in ('super_admin', 'support_admin')
+    )
+  );
+
+grant all on public.announcements to anon, authenticated, service_role;
+grant all on public.mosque_events to anon, authenticated, service_role;
+grant all on public.support_cases to anon, authenticated, service_role;
+
 commit;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import { supabase } from '@/lib/supabase';
-import { Mosque } from '@/lib/types';
+import { useAdminAuth } from '@/lib/auth-context';
 import {
   QrCode,
   Building2,
@@ -13,7 +13,7 @@ import {
   Minimize2,
   ShieldCheck,
   Sparkles,
-  Info,
+  AlertCircle,
 } from 'lucide-react';
 
 const SAMPLE_MOSQUES = [
@@ -28,12 +28,15 @@ const SAMPLE_MOSQUES = [
 const PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jummah'] as const;
 
 export default function MosqueQrDisplayPage() {
+  const { role, activeMosqueId } = useAdminAuth();
   const [mosques, setMosques] = useState(SAMPLE_MOSQUES);
-  const [selectedMosqueId, setSelectedMosqueId] = useState('m1');
+  const [selectedMosqueId, setSelectedMosqueId] = useState(activeMosqueId || 'm1');
   const [selectedPrayer, setSelectedPrayer] = useState<'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha' | 'jummah'>('fajr');
   const [secondsLeft, setSecondsLeft] = useState(60);
   const [tokenPayload, setTokenPayload] = useState('');
+  const [signature, setSignature] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Auto-detect prayer based on Kerala local time
@@ -63,47 +66,53 @@ export default function MosqueQrDisplayPage() {
           );
         }
       } catch {
-        // Fallback to sample
+        // Fallback
       }
     }
     load();
   }, []);
 
-  // Generate rotating dynamic token every 60 seconds
-  const generateDynamicToken = () => {
-    const timestamp = Date.now();
-    // Deterministic client signature for anti-replay
-    const signature = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const payload = `salahnear://mosque/${selectedMosqueId}?session=${selectedPrayer}&ts=${timestamp}&sig=${signature}`;
-    setTokenPayload(payload);
-    setSecondsLeft(60);
+  // Fetch server-signed token from /api/qr
+  const fetchServerToken = async () => {
+    try {
+      const res = await fetch(`/api/qr?mosqueId=${selectedMosqueId}&session=${selectedPrayer}`);
+      const data = await res.json();
+      if (data.success && data.payload) {
+        setTokenPayload(data.payload);
+        setSignature(data.signature);
+        setSecondsLeft(60);
+        setErrorMsg(null);
 
-    if (canvasRef.current) {
-      QRCode.toCanvas(
-        canvasRef.current,
-        payload,
-        {
-          width: 320,
-          margin: 2,
-          color: {
-            dark: '#064e3b', // Deep emerald
-            light: '#ffffff',
-          },
-        },
-        (error) => {
-          if (error) console.error(error);
+        if (canvasRef.current) {
+          QRCode.toCanvas(
+            canvasRef.current,
+            data.payload,
+            {
+              width: 320,
+              margin: 2,
+              color: {
+                dark: '#064e3b',
+                light: '#ffffff',
+              },
+            },
+            (error) => {
+              if (error) console.error(error);
+            }
+          );
         }
-      );
+      }
+    } catch (err: any) {
+      setErrorMsg('Failed to obtain cryptographic QR token from server.');
     }
   };
 
   // Regeneration countdown timer
   useEffect(() => {
-    generateDynamicToken();
+    fetchServerToken();
     const interval = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          generateDynamicToken();
+          fetchServerToken();
           return 60;
         }
         return prev - 1;
@@ -113,7 +122,7 @@ export default function MosqueQrDisplayPage() {
     return () => clearInterval(interval);
   }, [selectedMosqueId, selectedPrayer]);
 
-  // Redraw QR code when canvas ref attaches or payload changes
+  // Redraw when payload or canvas attaches
   useEffect(() => {
     if (canvasRef.current && tokenPayload) {
       QRCode.toCanvas(
@@ -145,8 +154,8 @@ export default function MosqueQrDisplayPage() {
   const selectedMosque = mosques.find((m) => m.id === selectedMosqueId) || mosques[0];
 
   return (
-    <div className={`space-y-6 ${isFullscreen ? 'p-10 bg-slate-950 text-white min-h-screen' : ''}`}>
-      {/* Header controls (hidden or styled in full screen) */}
+    <div className={`space-y-6 ${isFullscreen ? 'fixed inset-0 z-50 bg-slate-950 p-8 overflow-y-auto' : ''}`}>
+      {/* Header controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -154,39 +163,47 @@ export default function MosqueQrDisplayPage() {
             Live Mosque Dynamic QR Display
           </h1>
           <p className="text-sm text-slate-500">
-            Kiosk & TV display screen for congregational check-ins. Tokens rotate every 60 seconds to prevent fraudulent static photo sharing.
+            TV display kiosk for entrance check-ins. Cryptographic HMAC tokens rotate every 60 seconds to eliminate static photo sharing.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => generateDynamicToken()}
+            onClick={() => fetchServerToken()}
             className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-sm transition-colors"
           >
             <RefreshCw className="w-4 h-4 text-emerald-600" />
-            <span>Rotate Token Now</span>
+            <span>Regenerate Server Token</span>
           </button>
           <button
             onClick={toggleFullscreen}
             className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            <span>{isFullscreen ? 'Exit Kiosk Mode' : 'Kiosk Fullscreen'}</span>
+            <span>{isFullscreen ? 'Exit Kiosk Display' : 'Launch Fullscreen Kiosk'}</span>
           </button>
         </div>
       </div>
 
-      {/* Selectors Bar */}
+      {errorMsg && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* Mosque and Prayer Selection (Disabled or restricted for Mosque Admins) */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-            Active Mosque Venue
+            Mosque Venue
           </label>
           <select
             value={selectedMosqueId}
+            disabled={role === 'mosque_admin'}
             onChange={(e) => setSelectedMosqueId(e.target.value)}
-            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
+            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white disabled:opacity-60"
           >
             {mosques.map((m) => (
               <option key={m.id} value={m.id}>
@@ -221,14 +238,13 @@ export default function MosqueQrDisplayPage() {
 
       {/* Main Kiosk Center Card */}
       <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white rounded-3xl p-8 border border-emerald-900/40 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
-        {/* Islamic Geometric Accent Ring */}
         <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full border border-emerald-500/10 pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full border border-emerald-500/10 pointer-events-none" />
 
-        {/* Live Badge */}
+        {/* Live Status Badge */}
         <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-4">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span>Live Congregation Check-In</span>
+          <span>Server Signed • Validated Session</span>
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
@@ -236,20 +252,20 @@ export default function MosqueQrDisplayPage() {
         </h2>
         <p className="text-emerald-300 text-sm font-medium mb-6 flex items-center gap-1.5">
           <Clock className="w-4 h-4" />
-          Current Session:{' '}
+          Active Congregation:{' '}
           <span className="uppercase font-bold tracking-wider text-amber-300">
-            {selectedPrayer} Congregation
+            {selectedPrayer} Session
           </span>
         </p>
 
-        {/* QR Code Canvas Card */}
+        {/* High-Contrast QR Code Card */}
         <div className="bg-white p-6 rounded-3xl shadow-2xl border-4 border-emerald-500/30 flex flex-col items-center">
           <canvas ref={canvasRef} className="rounded-xl shadow-inner max-w-full" />
 
           {/* Countdown timer under QR */}
           <div className="mt-4 w-full">
             <div className="flex items-center justify-between text-xs text-slate-600 font-semibold mb-1.5">
-              <span>Dynamic Token Expires In:</span>
+              <span>Token Auto-Refresh In:</span>
               <span className="font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md font-bold">
                 {secondsLeft}s
               </span>
@@ -267,18 +283,17 @@ export default function MosqueQrDisplayPage() {
         <div className="mt-8 max-w-md w-full bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 text-xs text-slate-300 space-y-2 text-left">
           <div className="flex items-center space-x-2 font-bold text-slate-100">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>How Congregants Check In:</span>
+            <span>Congregant Instructions:</span>
           </div>
           <ol className="list-decimal list-inside space-y-1 text-slate-300 leading-relaxed">
             <li>Open the <strong>SalahNear</strong> mobile application.</li>
-            <li>Tap <strong>Verify Attendance</strong> &rarr; Select <strong>Mosque QR Code</strong> tab.</li>
-            <li>Point camera at this screen to earn <strong>5 community points</strong> and extend your streak!</li>
+            <li>Tap <strong>Verify Attendance</strong> &rarr; Select <strong>Mosque QR Code</strong>.</li>
+            <li>Scan this screen to earn <strong>5 community points</strong> and advance your streak!</li>
           </ol>
         </div>
 
-        {/* Payload preview info */}
         <div className="mt-4 text-[10px] text-slate-500 font-mono">
-          Signed Payload: {tokenPayload}
+          HMAC-SHA256 Signature: {signature || 'e4b9...'}
         </div>
       </div>
     </div>

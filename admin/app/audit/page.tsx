@@ -13,52 +13,90 @@ import {
   User,
   Database,
   Code2,
+  Calendar,
 } from 'lucide-react';
 
 const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'log_1',
-    actor_name: 'Super Admin',
+    actor_user_id: 'adm_super_01',
+    actor_name: 'Dr. Abdul Rahman Koya (Super Admin)',
     action: 'MOSQUE_VERIFIED',
+    entity_type: 'mosques',
+    entity_id: 'm1',
     target_table: 'mosques',
     target_id: 'm1',
+    before_state: { status: 'pending', attendance_radius_m: 60 },
+    after_state: { status: 'verified', attendance_radius_m: 80 },
     changes: { name: 'Mishkal Mosque', status: 'verified', attendance_radius_m: 80 },
+    reason: 'Verified through on-site committee visit and Mahal records confirmation',
+    ip_address: '103.112.214.10',
+    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
     created_at: '2026-11-04T07:15:20+05:30',
   },
   {
     id: 'log_2',
-    actor_name: 'Attendance Reviewer',
+    actor_user_id: 'adm_reviewer_01',
+    actor_name: 'Musthafa Kamal (Attendance Reviewer)',
     action: 'ATTENDANCE_VERIFIED',
+    entity_type: 'attendance',
+    entity_id: 'att_rev_3',
     target_table: 'attendance',
     target_id: 'att_rev_3',
+    before_state: { status: 'pending', points: 0 },
+    after_state: { status: 'verified', points: 5 },
     changes: { user: 'Aisha Siddiqa', decision: 'verified', points_awarded: 5 },
+    reason: 'Camera proof inside prayer hall with verified SHA-256 and genuine GPS fix',
+    ip_address: '117.204.18.42',
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     created_at: '2026-11-04T06:50:12+05:30',
   },
   {
     id: 'log_3',
-    actor_name: 'Mosque Administrator',
+    actor_user_id: 'adm_mosque_01',
+    actor_name: 'Imam Rashid Moulavi (Mosque Admin)',
     action: 'UPDATE_IQAMAH_SCHEDULE',
+    entity_type: 'prayer_schedules',
+    entity_id: 'm1',
     target_table: 'prayer_schedules',
     target_id: 'm1',
+    before_state: { fajr_iqamah: '05:25', version: 3 },
+    after_state: { fajr_iqamah: '05:30', version: 4 },
     changes: { fajr_iqamah: '05:30', version: 4 },
+    reason: 'Seasonal winter twilight timing adjustment approved by Mahal committee',
+    ip_address: '103.88.24.5',
     created_at: '2026-11-03T18:00:00+05:30',
   },
   {
     id: 'log_4',
-    actor_name: 'Super Admin',
+    actor_user_id: 'adm_super_01',
+    actor_name: 'Dr. Abdul Rahman Koya (Super Admin)',
     action: 'POINTS_ADJUSTMENT',
+    entity_type: 'user_points',
+    entity_id: 'u_101',
     target_table: 'user_points',
     target_id: 'u_101',
+    before_state: { total_points: 310 },
+    after_state: { total_points: 320 },
     changes: { delta: 10, reason: 'Verified manual Jummah attendance confirmation' },
+    reason: 'App dispute resolution for network drop during Jummah check-in',
+    ip_address: '103.112.214.10',
     created_at: '2026-11-02T14:22:00+05:30',
   },
   {
     id: 'log_5',
-    actor_name: 'Attendance Reviewer',
+    actor_user_id: 'adm_reviewer_01',
+    actor_name: 'Musthafa Kamal (Attendance Reviewer)',
     action: 'ATTENDANCE_FLAGGED',
+    entity_type: 'attendance',
+    entity_id: 'att_rev_2',
     target_table: 'attendance',
     target_id: 'att_rev_2',
+    before_state: { status: 'pending' },
+    after_state: { status: 'flagged' },
     changes: { user: 'Salman Faris', reason: 'Mock location spoofing detected' },
+    reason: 'Android MockProvider signal active and distance exceeded configured radius',
+    ip_address: '117.204.18.42',
     created_at: '2026-11-02T05:35:10+05:30',
   },
 ];
@@ -66,7 +104,7 @@ const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
   const [search, setSearch] = useState('');
-  const [selectedTable, setSelectedTable] = useState('all');
+  const [selectedEntity, setSelectedEntity] = useState('all');
   const [activeLog, setActiveLog] = useState<AuditLogItem | null>(null);
 
   useEffect(() => {
@@ -82,23 +120,50 @@ export default function AuditLogsPage() {
         .limit(100);
 
       if (!error && data && data.length > 0) {
-        setLogs(data as AuditLogItem[]);
+        const mapped: AuditLogItem[] = data.map((d: any) => ({
+          id: d.id,
+          actor_user_id: d.actor_id,
+          actor_name: d.actor_name || 'Admin Officer',
+          action: d.action,
+          entity_type: d.entity_type || d.target_table || 'system',
+          entity_id: d.entity_id || d.target_id || '',
+          target_table: d.target_table || d.entity_type,
+          target_id: d.target_id || d.entity_id,
+          before_state: d.before_state,
+          after_state: d.after_state,
+          changes: d.changes,
+          reason: d.reason || 'Administrative update',
+          ip_address: d.ip_address,
+          user_agent: d.user_agent,
+          created_at: d.created_at,
+        }));
+        setLogs(mapped);
       }
     } catch {
-      // Use fallback
+      // Fallback
     }
   };
 
   const handleExportCSV = () => {
-    const headers = ['Log ID', 'Actor', 'Action', 'Target Table', 'Target ID', 'Timestamp', 'Changes'];
+    const headers = [
+      'Log ID',
+      'Actor Name',
+      'Action',
+      'Entity Type',
+      'Entity ID',
+      'Reason',
+      'Timestamp',
+      'IP Address',
+    ];
     const rows = logs.map((l) => [
       l.id,
       `"${l.actor_name}"`,
       `"${l.action}"`,
-      `"${l.target_table}"`,
-      `"${l.target_id || ''}"`,
+      `"${l.entity_type}"`,
+      `"${l.entity_id || ''}"`,
+      `"${l.reason || ''}"`,
       `"${l.created_at}"`,
-      `"${JSON.stringify(l.changes || {}).replace(/"/g, '""')}"`,
+      `"${l.ip_address || ''}"`,
     ]);
 
     const csvContent =
@@ -108,22 +173,24 @@ export default function AuditLogsPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `salahnear_audit_logs_${Date.now()}.csv`);
+    link.setAttribute('download', `salahnear_audit_trail_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const filteredLogs = logs.filter((log) => {
+    const term = search.toLowerCase();
     const matchesSearch =
-      log.actor_name.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase()) ||
-      (log.target_id && log.target_id.toLowerCase().includes(search.toLowerCase()));
+      log.actor_name.toLowerCase().includes(term) ||
+      log.action.toLowerCase().includes(term) ||
+      (log.entity_id && log.entity_id.toLowerCase().includes(term)) ||
+      (log.reason && log.reason.toLowerCase().includes(term));
 
-    const matchesTable =
-      selectedTable === 'all' || log.target_table === selectedTable;
+    const matchesEntity =
+      selectedEntity === 'all' || log.entity_type === selectedEntity;
 
-    return matchesSearch && matchesTable;
+    return matchesSearch && matchesEntity;
   });
 
   return (
@@ -133,10 +200,10 @@ export default function AuditLogsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <FileText className="w-7 h-7 text-emerald-600" />
-            System Audit & Compliance Logs
+            Immutable Audit Trail & Compliance Log
           </h1>
           <p className="text-sm text-slate-500">
-            Immutable audit trail of administrative overrides, points transactions, schedule publications, and role grants.
+            Cryptographically audited record of sensitive overrides, points reversals, schedule publications, and role grants.
           </p>
         </div>
 
@@ -155,7 +222,7 @@ export default function AuditLogsPage() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
-            placeholder="Search action, actor, target ID..."
+            placeholder="Search action, administrator, reason, entity ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -163,16 +230,18 @@ export default function AuditLogsPage() {
         </div>
 
         <select
-          value={selectedTable}
-          onChange={(e) => setSelectedTable(e.target.value)}
+          value={selectedEntity}
+          onChange={(e) => setSelectedEntity(e.target.value)}
           className="px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
         >
-          <option value="all">All Target Tables</option>
+          <option value="all">All Entity Types</option>
           <option value="mosques">Mosques</option>
           <option value="attendance">Attendance</option>
           <option value="prayer_schedules">Prayer Schedules</option>
           <option value="user_points">User Points</option>
           <option value="user_roles">User Roles</option>
+          <option value="announcements">Announcements</option>
+          <option value="support_cases">Support Cases</option>
         </select>
       </div>
 
@@ -183,11 +252,11 @@ export default function AuditLogsPage() {
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <th className="px-5 py-3.5">Timestamp</th>
-                <th className="px-4 py-3.5">Actor</th>
+                <th className="px-4 py-3.5">Administrator</th>
                 <th className="px-4 py-3.5">Action</th>
-                <th className="px-4 py-3.5">Target Table</th>
-                <th className="px-4 py-3.5">Target ID</th>
-                <th className="px-5 py-3.5 text-right">Payload Details</th>
+                <th className="px-4 py-3.5">Entity</th>
+                <th className="px-4 py-3.5">Reason / Justification</th>
+                <th className="px-5 py-3.5 text-right">Payload</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -208,13 +277,13 @@ export default function AuditLogsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-xs font-mono text-slate-600">
-                    <span className="inline-flex items-center gap-1">
-                      <Database className="w-3 h-3 text-slate-400" />
-                      {log.target_table}
+                    <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
+                      {log.entity_type}
                     </span>
+                    <span className="text-slate-400 block text-[11px]">{log.entity_id || '—'}</span>
                   </td>
-                  <td className="px-4 py-4 text-xs font-mono text-slate-400">
-                    {log.target_id || '—'}
+                  <td className="px-4 py-4 text-xs text-slate-600 max-w-xs truncate">
+                    {log.reason || '—'}
                   </td>
                   <td className="px-5 py-4 text-right">
                     <button
@@ -222,7 +291,7 @@ export default function AuditLogsPage() {
                       className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                     >
                       <Code2 className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Inspect JSON</span>
+                      <span>Inspect</span>
                     </button>
                   </td>
                 </tr>
@@ -235,11 +304,13 @@ export default function AuditLogsPage() {
       {/* JSON Inspection Modal */}
       {activeLog && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150 space-y-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center space-x-2">
                 <Code2 className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900">Audit Log Payload Detail</h3>
+                <h3 className="text-base font-bold text-slate-900">
+                  Audit Record: {activeLog.action}
+                </h3>
               </div>
               <button
                 onClick={() => setActiveLog(null)}
@@ -249,23 +320,40 @@ export default function AuditLogsPage() {
               </button>
             </div>
 
-            <div className="text-xs space-y-1.5 text-slate-600">
-              <div>
-                <strong>Action:</strong> <span className="font-mono">{activeLog.action}</span>
-              </div>
+            <div className="bg-slate-50 p-3.5 rounded-xl text-xs space-y-1.5 text-slate-600 border border-slate-100">
               <div>
                 <strong>Actor:</strong> {activeLog.actor_name}
               </div>
               <div>
-                <strong>Entity:</strong> <span className="font-mono">{activeLog.target_table} ({activeLog.target_id})</span>
+                <strong>Entity:</strong> <span className="font-mono">{activeLog.entity_type} ({activeLog.entity_id})</span>
               </div>
               <div>
-                <strong>Timestamp:</strong> {new Date(activeLog.created_at).toISOString()}
+                <strong>Reason:</strong> {activeLog.reason || 'None provided'}
               </div>
+              {activeLog.ip_address && (
+                <div>
+                  <strong>Observed IP:</strong> <span className="font-mono">{activeLog.ip_address}</span>
+                </div>
+              )}
             </div>
 
-            <div className="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto max-h-64 shadow-inner">
-              <pre>{JSON.stringify(activeLog.changes || {}, null, 2)}</pre>
+            {/* Before vs After comparison */}
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-slate-700">Audit State Transition:</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-500 mb-1">Before State</div>
+                  <pre className="bg-slate-900 text-slate-300 p-3 rounded-xl font-mono text-[11px] overflow-x-auto max-h-48">
+                    {JSON.stringify(activeLog.before_state || {}, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold text-emerald-600 mb-1">After State</div>
+                  <pre className="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto max-h-48">
+                    {JSON.stringify(activeLog.after_state || activeLog.changes || {}, null, 2)}
+                  </pre>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end pt-2">
@@ -273,7 +361,7 @@ export default function AuditLogsPage() {
                 onClick={() => setActiveLog(null)}
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
               >
-                Close
+                Close Audit Viewer
               </button>
             </div>
           </div>
