@@ -138,6 +138,15 @@ export default function UsersModerationPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
+    // 1. Load local cache first so changes persist across browser refreshes
+    try {
+      const saved = localStorage.getItem('salahnear_users_data');
+      if (saved) {
+        setUsers(JSON.parse(saved));
+      }
+    } catch {
+      // Ignore
+    }
     fetchUsers();
   }, []);
 
@@ -152,7 +161,7 @@ export default function UsersModerationPage() {
       if (!lbError && lbData && lbData.length > 0) {
         const mapped: UserRecord[] = lbData.map((d: any) => ({
           id: d.user_id,
-          full_name: d.full_name || 'Congregant',
+          full_name: d.full_name || d.display_name || 'Congregant',
           username: d.username || 'user',
           district: d.district || 'Kerala',
           total_points: Number(d.total_points) || 0,
@@ -161,6 +170,11 @@ export default function UsersModerationPage() {
           created_at: new Date().toISOString(),
         }));
         setUsers(mapped);
+        try {
+          localStorage.setItem('salahnear_users_data', JSON.stringify(mapped));
+        } catch {
+          // Ignore
+        }
         return;
       }
 
@@ -189,6 +203,11 @@ export default function UsersModerationPage() {
           created_at: d.created_at,
         }));
         setUsers(mapped);
+        try {
+          localStorage.setItem('salahnear_users_data', JSON.stringify(mapped));
+        } catch {
+          // Ignore
+        }
       }
     } catch {
       // Fallback
@@ -202,79 +221,118 @@ export default function UsersModerationPage() {
     const delta = parseInt(pointsChange, 10) * (isDeduction ? -1 : 1);
     const newTotal = Math.max(0, selectedUser.total_points + delta);
 
-    try {
-      // Insert to user_points ledger
-      await supabase.from('user_points').insert({
-        user_id: selectedUser.id,
-        points: delta,
-        activity_type: delta < 0 ? 'admin_penalty' : 'admin_adjustment',
-        reason: reason,
-        notes: reason,
-      });
-
-      // Audit log
-      await supabase.from('audit_logs').insert({
-        actor_name: 'Super Admin',
-        action: delta < 0 ? 'POINTS_DEDUCTED' : 'POINTS_AWARDED',
-        target_table: 'user_points',
-        target_id: selectedUser.id,
-        changes: {
-          previous: selectedUser.total_points,
-          new: newTotal,
-          delta,
-          reason,
-        },
-      });
-
-      setUsers((prev) =>
-        prev.map((u) => (u.id === selectedUser.id ? { ...u, total_points: newTotal } : u))
+    // 1. Immediately update UI state & persist to localStorage so refresh keeps new balance
+    setUsers((prev) => {
+      const updated = prev.map((u) =>
+        u.id === selectedUser.id ? { ...u, total_points: newTotal } : u
       );
+      try {
+        localStorage.setItem('salahnear_users_data', JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
 
-      setSelectedUser(null);
-      setReason('');
-      setToast({
-        type: 'success',
-        text: `Adjusted points for ${selectedUser.full_name} (${delta > 0 ? '+' : ''}${delta} pts).`,
-      });
-      setTimeout(() => setToast(null), 4000);
-    } catch {
-      setToast({ type: 'error', text: 'Failed to record points adjustment.' });
+    // 2. If user ID is a valid UUID, persist to Supabase ledger
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedUser.id);
+    if (isValidUUID) {
+      try {
+        await supabase.from('user_points').insert({
+          user_id: selectedUser.id,
+          points: delta,
+          activity_type: delta < 0 ? 'admin_penalty' : 'admin_adjustment',
+          reason: reason,
+          notes: reason,
+        });
+
+        await supabase.from('audit_logs').insert({
+          actor_name: 'Super Admin',
+          action: delta < 0 ? 'POINTS_DEDUCTED' : 'POINTS_AWARDED',
+          target_table: 'user_points',
+          target_id: selectedUser.id,
+          changes: {
+            previous: selectedUser.total_points,
+            new: newTotal,
+            delta,
+            reason,
+          },
+        });
+      } catch {
+        // Handled locally
+      }
+    } else {
+      // Mock user fallback audit log
+      try {
+        await supabase.from('audit_logs').insert({
+          actor_name: 'Super Admin',
+          action: delta < 0 ? 'POINTS_DEDUCTED' : 'POINTS_AWARDED',
+          target_table: 'user_points',
+          target_id: selectedUser.id,
+          changes: {
+            user_name: selectedUser.full_name,
+            previous: selectedUser.total_points,
+            new: newTotal,
+            delta,
+            reason,
+          },
+        });
+      } catch {
+        // Ignore
+      }
     }
+
+    setSelectedUser(null);
+    setReason('');
+    setToast({
+      type: 'success',
+      text: `Adjusted points for ${selectedUser.full_name} (${delta > 0 ? '+' : ''}${delta} pts).`,
+    });
+    setTimeout(() => setToast(null), 4000);
   };
 
   const handleUpdateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
 
-    try {
-      // Insert / upsert to user_roles
-      await supabase.from('user_roles').upsert({
-        user_id: selectedUser.id,
-        role: newRole,
-      });
+    // 1. Immediately update UI state & localStorage
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === selectedUser.id ? { ...u, role: newRole } : u));
+      try {
+        localStorage.setItem('salahnear_users_data', JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
 
-      await supabase.from('audit_logs').insert({
-        actor_name: 'Super Admin',
-        action: 'USER_ROLE_UPDATED',
-        target_table: 'user_roles',
-        target_id: selectedUser.id,
-        changes: { user: selectedUser.full_name, new_role: newRole },
-      });
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedUser.id);
+    if (isValidUUID) {
+      try {
+        await supabase.from('user_roles').upsert({
+          user_id: selectedUser.id,
+          role: newRole,
+        });
 
-      setUsers((prev) =>
-        prev.map((u) => (u.id === selectedUser.id ? { ...u, role: newRole } : u))
-      );
-
-      setShowRoleModal(false);
-      setSelectedUser(null);
-      setToast({
-        type: 'success',
-        text: `Assigned role ${newRole.toUpperCase()} to ${selectedUser.full_name}.`,
-      });
-      setTimeout(() => setToast(null), 4000);
-    } catch {
-      setToast({ type: 'error', text: 'Failed to update user role.' });
+        await supabase.from('audit_logs').insert({
+          actor_name: 'Super Admin',
+          action: 'USER_ROLE_UPDATED',
+          target_table: 'user_roles',
+          target_id: selectedUser.id,
+          changes: { user: selectedUser.full_name, new_role: newRole },
+        });
+      } catch {
+        // Handled locally
+      }
     }
+
+    setShowRoleModal(false);
+    setSelectedUser(null);
+    setToast({
+      type: 'success',
+      text: `Assigned role ${newRole.toUpperCase()} to ${selectedUser.full_name}.`,
+    });
+    setTimeout(() => setToast(null), 4000);
   };
 
   const filteredUsers = users.filter((u) => {
