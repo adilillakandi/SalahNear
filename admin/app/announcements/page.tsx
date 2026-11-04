@@ -33,7 +33,7 @@ const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     published_at: '2026-11-01T08:00:00Z',
     expires_at: '2026-12-01T00:00:00Z',
     send_push: true,
-    author_name: 'Dr. Abdul Rahman Koya (Super Admin)',
+    author_name: 'Dr. Abdul Rahman Koya',
     created_at: '2026-11-01T08:00:00Z',
   },
   {

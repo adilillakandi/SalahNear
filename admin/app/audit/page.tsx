@@ -20,7 +20,7 @@ const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'log_1',
     actor_user_id: 'adm_super_01',
-    actor_name: 'Dr. Abdul Rahman Koya (Super Admin)',
+    actor_name: 'Dr. Abdul Rahman Koya',
     action: 'MOSQUE_VERIFIED',
     entity_type: 'mosques',
     entity_id: 'm1',
@@ -70,7 +70,7 @@ const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'log_4',
     actor_user_id: 'adm_super_01',
-    actor_name: 'Dr. Abdul Rahman Koya (Super Admin)',
+    actor_name: 'Dr. Abdul Rahman Koya',
     action: 'POINTS_ADJUSTMENT',
     entity_type: 'user_points',
     entity_id: 'u_101',

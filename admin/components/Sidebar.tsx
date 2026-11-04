@@ -18,7 +18,6 @@ import {
   CalendarDays,
   LifeBuoy,
   UserCog,
-  LogOut,
   ExternalLink,
 } from 'lucide-react';
 
@@ -103,7 +102,11 @@ const ALL_NAV_ITEMS: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { role, adminUser, signOut } = useAdminAuth();
+  const { role, adminUser } = useAdminAuth();
+
+  const cleanName = (adminUser?.full_name || 'Dr. Abdul Rahman Koya')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
 
   // Filter items permitted for the current admin role
   const permittedItems = ALL_NAV_ITEMS.filter((item) => item.allowedRoles.includes(role));
@@ -203,18 +206,9 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
-          <div className="truncate mr-2">
-            <div className="font-semibold text-slate-300 truncate text-[11px]">{adminUser?.full_name}</div>
-            <div className="text-[10px] text-slate-500 truncate">{adminUser?.email}</div>
-          </div>
-          <button
-            onClick={() => signOut()}
-            title="Sign Out"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+        <div className="pt-2 border-t border-slate-800/60">
+          <div className="font-semibold text-slate-300 truncate text-[11px]">{cleanName}</div>
+          <div className="text-[10px] text-slate-500 truncate">{adminUser?.email}</div>
         </div>
       </div>
     </aside>

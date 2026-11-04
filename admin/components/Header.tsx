@@ -12,6 +12,7 @@ import {
   Building2,
   Sparkles,
   CheckCircle2,
+  LogOut,
 } from 'lucide-react';
 
 const ROLE_OPTIONS: { role: AdminRole; label: string; scope: string }[] = [
@@ -23,8 +24,12 @@ const ROLE_OPTIONS: { role: AdminRole; label: string; scope: string }[] = [
 ];
 
 export default function Header() {
-  const { role, adminUser, switchRole } = useAdminAuth();
+  const { role, adminUser, switchRole, signOut } = useAdminAuth();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+
+  const cleanName = (adminUser?.full_name || 'Dr. Abdul Rahman Koya')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20">
@@ -90,19 +95,28 @@ export default function Header() {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500" />
         </button>
 
-        {/* Profile Card */}
+        {/* Profile Card & Logout */}
         <div className="flex items-center space-x-3 pl-3 border-l border-slate-200">
           <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
-            {adminUser?.full_name?.charAt(0) || 'A'}
+            {cleanName.charAt(0) || 'A'}
           </div>
           <div className="hidden lg:block text-left">
             <div className="text-xs font-bold text-slate-900 leading-tight">
-              {adminUser?.full_name || 'Administrator'}
+              {cleanName}
             </div>
             <div className="text-[11px] text-slate-500 capitalize">
               {role.replace('_', ' ')}
             </div>
           </div>
+
+          {/* Logout Icon Button */}
+          <button
+            onClick={() => signOut()}
+            title="Sign Out"
+            className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-slate-100 transition-colors ml-1"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </header>

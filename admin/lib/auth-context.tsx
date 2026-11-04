@@ -56,7 +56,11 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         setRole(savedRole);
       }
       if (savedUser) {
-        setAdminUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        if (parsed.full_name) {
+          parsed.full_name = parsed.full_name.replace(/\s*\([^)]*\)/g, '');
+        }
+        setAdminUser(parsed);
       }
     } catch {
       // Ignore localStorage read errors
@@ -73,16 +77,16 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       email: `${newRole}@salahnear.org`,
       full_name:
         newRole === 'super_admin'
-          ? 'Dr. Abdul Rahman Koya (Super Admin)'
+          ? 'Dr. Abdul Rahman Koya'
           : newRole === 'mosque_admin'
-          ? 'Imam Rashid Moulavi (Mosque Admin)'
+          ? 'Imam Rashid Moulavi'
           : newRole === 'district_admin'
-          ? 'Zuhair Ahmed (District Admin)'
+          ? 'Zuhair Ahmed'
           : newRole === 'attendance_reviewer'
-          ? 'Musthafa Kamal (Attendance Reviewer)'
+          ? 'Musthafa Kamal'
           : newRole === 'support_admin'
-          ? 'Fathima Beegum (Support Admin)'
-          : 'State Overseer (State Admin)',
+          ? 'Fathima Beegum'
+          : 'State Overseer',
       role: newRole,
       state: 'Kerala',
       district: newRole === 'district_admin' ? 'Kozhikode' : undefined,
