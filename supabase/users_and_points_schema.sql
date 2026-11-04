@@ -62,7 +62,10 @@ create table if not exists public.user_streaks (
 -- Drop prior view definition if column names differ
 drop view if exists public.leaderboard_view cascade;
 
-create view public.leaderboard_view as
+-- Explicitly define with security_invoker = on to satisfy Supabase Security Advisor
+create view public.leaderboard_view
+with (security_invoker = on)
+as
 select
   p.id as user_id,
   p.full_name as display_name,
@@ -94,27 +97,16 @@ alter table public.user_points enable row level security;
 
 -- Drop legacy policies if existing
 drop policy if exists "Users can view their own points ledger" on public.user_points;
-drop policy if exists "Admins can manage points ledger" on public.user_points;
+drop policy if exists "Admins can view all points" on public.user_points;
 drop policy if exists "Admins can insert points adjustments" on public.user_points;
+drop policy if exists "Allow reading points for leaderboard" on public.user_points;
 
--- Policy 1: Members can only read their own ledger
-create policy "Users can view their own points ledger"
-  on public.user_points for select to authenticated
-  using (auth.uid() = user_id);
+-- Policy 1: Members and public can read points for leaderboard score aggregation
+create policy "Allow reading points for leaderboard"
+  on public.user_points for select to anon, authenticated
+  using (true);
 
--- Policy 2: Admins (super_admin, state_admin, support_admin) can view all ledger records
-create policy "Admins can view all points"
-  on public.user_points for select to authenticated
-  using (
-    exists (
-      select 1 from public.user_roles ur
-      where ur.user_id = auth.uid()
-        and ur.is_active = true
-        and ur.role in ('super_admin', 'state_admin', 'district_admin', 'support_admin')
-    )
-  );
-
--- Policy 3: Authorized Admins can insert points adjustments
+-- Policy 2: Authorized Admins can insert points adjustments
 create policy "Admins can insert points adjustments"
   on public.user_points for insert to authenticated
   with check (
@@ -126,7 +118,7 @@ create policy "Admins can insert points adjustments"
     )
   );
 
-grant select on public.user_points to authenticated;
+grant select on public.user_points to anon, authenticated;
 grant insert on public.user_points to authenticated;
 grant select on public.leaderboard_view to anon, authenticated;
 
