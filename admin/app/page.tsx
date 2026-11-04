@@ -15,7 +15,6 @@ import {
   QrCode,
   ShieldCheck,
   Users,
-  Megaphone,
   LifeBuoy,
   FileText,
   UserCog,
@@ -106,7 +105,7 @@ export default function DashboardOverviewPage() {
           </h1>
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
             {role === 'mosque_admin'
-              ? 'Managing daily Iqamah times, dynamic QR check-in displays, and community announcements for your assigned mosque.'
+              ? 'Managing daily Iqamah times, dynamic QR check-in displays, and community events for your assigned mosque.'
               : role === 'district_admin'
               ? 'Overseeing mosque directory verification and geofence calibration across Kozhikode district.'
               : role === 'attendance_reviewer'
@@ -330,15 +329,15 @@ export default function DashboardOverviewPage() {
         </Link>
 
         <Link
-          href="/announcements"
+          href="/events"
           className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all flex items-center space-x-3 group"
         >
           <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-            <Megaphone className="w-5 h-5" />
+            <CalendarDays className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-900">Announcements</div>
-            <div className="text-[11px] text-slate-400">Publish scoped alerts</div>
+            <div className="text-xs font-bold text-slate-900">Mosque Events</div>
+            <div className="text-[11px] text-slate-400">Programs & Khutbahs</div>
           </div>
         </Link>
 

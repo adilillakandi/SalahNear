@@ -14,7 +14,6 @@ import {
   Users,
   FileText,
   Shield,
-  Megaphone,
   CalendarDays,
   LifeBuoy,
   UserCog,
@@ -72,12 +71,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
     href: '/users',
     icon: Users,
     allowedRoles: ['super_admin', 'state_admin', 'support_admin'],
-  },
-  {
-    name: 'Scoped Announcements',
-    href: '/announcements',
-    icon: Megaphone,
-    allowedRoles: ['super_admin', 'state_admin', 'district_admin', 'mosque_admin'],
   },
   {
     name: 'Mosque Events',
