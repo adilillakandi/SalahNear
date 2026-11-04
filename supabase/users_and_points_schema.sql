@@ -5,13 +5,21 @@
 -- ==============================================================================
 
 -- 1. ENHANCE PROFILES TABLE (ACCOUNT STATUS & MODERATION)
-alter table public.profiles add column if not exists account_status text not null default 'active'
-  check (account_status in ('active', 'suspended', 'flagged', 'banned'));
+alter table public.profiles add column if not exists account_status text not null default 'active';
 alter table public.profiles add column if not exists suspension_reason text;
 alter table public.profiles add column if not exists suspended_at timestamptz;
 alter table public.profiles add column if not exists suspended_by uuid references public.profiles(id);
 alter table public.profiles add column if not exists is_leaderboard_hidden boolean not null default false;
 alter table public.profiles add column if not exists phone_number text;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_account_status_check') then
+    alter table public.profiles add constraint profiles_account_status_check
+      check (account_status in ('active', 'suspended', 'flagged', 'banned'));
+  end if;
+end;
+$$;
 
 create index if not exists profiles_status_idx on public.profiles(account_status);
 create index if not exists profiles_district_idx on public.profiles(district);
@@ -44,6 +52,25 @@ create table if not exists public.user_points (
 alter table public.user_points add column if not exists activity_type text not null default 'admin_adjustment';
 alter table public.user_points add column if not exists notes text;
 alter table public.user_points add column if not exists adjusted_by uuid references public.profiles(id);
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'user_points_activity_type_check') then
+    alter table public.user_points add constraint user_points_activity_type_check
+      check (activity_type in (
+        'prayer_attendance',
+        'streak_bonus',
+        'friend_encounter',
+        'admin_award',
+        'admin_penalty',
+        'admin_adjustment',
+        'admin_reversal',
+        'dispute_resolution',
+        'correction'
+      ));
+  end if;
+end;
+$$;
 
 create index if not exists user_points_user_created_idx on public.user_points(user_id, created_at desc);
 create index if not exists user_points_activity_idx on public.user_points(activity_type);
