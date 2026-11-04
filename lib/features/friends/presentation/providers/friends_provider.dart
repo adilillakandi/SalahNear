@@ -100,3 +100,4 @@ final friendsNotifierProvider =
   final repo = ref.watch(friendsRepositoryProvider);
   return FriendsNotifier(repo, ref);
 });
+

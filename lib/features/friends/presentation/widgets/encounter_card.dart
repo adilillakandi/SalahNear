@@ -195,3 +195,4 @@ class EncounterCard extends ConsumerWidget {
     );
   }
 }
+

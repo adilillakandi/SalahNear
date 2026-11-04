@@ -141,3 +141,4 @@ final authNotifierProvider =
   final repo = ref.watch(authRepositoryProvider);
   return AuthNotifier(repo);
 });
+

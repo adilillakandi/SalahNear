@@ -15,3 +15,4 @@ abstract class FriendRepository {
     required bool metFriend,
   });
 }
+

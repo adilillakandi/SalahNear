@@ -10,3 +10,4 @@ abstract class AuthRepository {
   Future<UserProfile> updateUserProfile(UserProfile profile);
   Stream<UserProfile?> authStateChanges();
 }
+

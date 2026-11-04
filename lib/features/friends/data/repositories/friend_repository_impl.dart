@@ -266,3 +266,4 @@ class FriendRepositoryImpl implements FriendRepository {
     return updated;
   }
 }
+
