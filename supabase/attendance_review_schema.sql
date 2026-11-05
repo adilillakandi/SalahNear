@@ -7,6 +7,15 @@
 -- Enable required cryptographic and geometric extensions
 create extension if not exists "pgcrypto";
 
+-- Ensure profiles.id has gen_random_uuid() default to prevent not-null insertion errors
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'profiles') then
+    alter table public.profiles alter column id set default gen_random_uuid();
+  end if;
+end;
+$$;
+
 -- ==============================================================================
 -- 1. ATTENDANCE TABLE ENHANCEMENTS
 -- ==============================================================================
@@ -791,7 +800,9 @@ grant execute on function public.get_attendance_queue_metrics to authenticated;
 grant execute on function public.submit_mobile_attendance to authenticated;
 
 -- ==============================================================================
--- 13. SEED REALISTIC SUBMISSION RECORDS MATCHING ADMIN QUEUE SCREENSHOTS
+-- 13. SEED REALISTIC SUBMISSION RECORDS MATCHING ADMIN QUEUE (SAFE SEEDING)
+-- Attaches sample review records to existing registered profiles and mosques
+-- Wrapped in an exception block so missing demo profiles will never abort migration
 -- ==============================================================================
 do $$
 declare
@@ -803,137 +814,133 @@ declare
   v_m2 uuid;
   v_m5 uuid;
   v_m6 uuid;
-  v_att1 uuid;
-  v_att2 uuid;
-  v_att3 uuid;
-  v_att4 uuid;
 begin
-  -- Lookup or create profiles matching the review screenshot
-  -- 1. Fahad Rahiman
+  -- 1. Safely find profiles (lookup by username or link to existing system profiles)
   select id into v_u1 from public.profiles where username = 'fahad_calicut';
   if v_u1 is null then
-    insert into public.profiles (full_name, username, district, account_status)
-    values ('Fahad Rahiman', 'fahad_calicut', 'Kozhikode', 'active')
-    returning id into v_u1;
+    select id into v_u1 from public.profiles order by created_at asc limit 1;
   end if;
 
-  -- 2. Salman Faris
   select id into v_u2 from public.profiles where username = 'salman_mlp';
   if v_u2 is null then
-    insert into public.profiles (full_name, username, district, account_status)
-    values ('Salman Faris', 'salman_mlp', 'Malappuram', 'active')
-    returning id into v_u2;
+    select id into v_u2 from public.profiles order by created_at asc offset 1 limit 1;
   end if;
 
-  -- 3. Aisha Siddiqa
   select id into v_u3 from public.profiles where username = 'aisha_ekm';
   if v_u3 is null then
-    insert into public.profiles (full_name, username, district, account_status)
-    values ('Aisha Siddiqa', 'aisha_ekm', 'Ernakulam', 'active')
-    returning id into v_u3;
+    select id into v_u3 from public.profiles order by created_at asc offset 2 limit 1;
   end if;
 
-  -- 4. Zameer KP
   select id into v_u4 from public.profiles where username = 'zameer_knr';
   if v_u4 is null then
-    insert into public.profiles (full_name, username, district, account_status)
-    values ('Zameer KP', 'zameer_knr', 'Kannur', 'active')
-    returning id into v_u4;
+    select id into v_u4 from public.profiles order by created_at asc offset 3 limit 1;
   end if;
 
-  -- Lookup or create mosques matching the review screenshot
-  -- Mishkal Mosque
+  -- 2. Lookup or link to existing registered mosques
   select id into v_m1 from public.mosques where name ilike '%Mishkal%' limit 1;
   if v_m1 is null then
-    insert into public.mosques (name, name_ml, district, attendance_radius_m, entrance_latitude, entrance_longitude)
-    values ('Mishkal Mosque, Kuttichira', 'മിശ്കാൽ പള്ളി', 'Kozhikode', 80, 11.2425, 75.7765)
-    returning id into v_m1;
+    select id into v_m1 from public.mosques order by name asc limit 1;
   end if;
 
-  -- Town Valiya Juma Masjid, Malappuram
   select id into v_m5 from public.mosques where name ilike '%Valiya Juma%' limit 1;
   if v_m5 is null then
-    insert into public.mosques (name, name_ml, district, attendance_radius_m, entrance_latitude, entrance_longitude)
-    values ('Town Valiya Juma Masjid, Malappuram', 'ടൗൺ വലിയ ജുമാ മസ്ജിദ്', 'Malappuram', 90, 11.0510, 76.0711)
-    returning id into v_m5;
+    select id into v_m5 from public.mosques order by name asc offset 1 limit 1;
   end if;
 
-  -- Edappally Toll Juma Masjid, Kochi
   select id into v_m6 from public.mosques where name ilike '%Edappally%' limit 1;
   if v_m6 is null then
-    insert into public.mosques (name, name_ml, district, attendance_radius_m, entrance_latitude, entrance_longitude)
-    values ('Edappally Toll Juma Masjid, Kochi', 'ഇടപ്പള്ളി ടോൾ ജുമാ മസ്ജിദ്', 'Ernakulam', 80, 10.0261, 76.3125)
-    returning id into v_m6;
+    select id into v_m6 from public.mosques order by name asc offset 2 limit 1;
   end if;
 
-  -- Kallai Juma Masjid, Kozhikode
   select id into v_m2 from public.mosques where name ilike '%Kallai%' limit 1;
   if v_m2 is null then
-    insert into public.mosques (name, name_ml, district, attendance_radius_m, entrance_latitude, entrance_longitude)
-    values ('Kallai Juma Masjid, Kozhikode', 'കല്ലായ് ജുമാ മസ്ജിദ്', 'Kozhikode', 85, 11.2330, 75.7950)
-    returning id into v_m2;
+    select id into v_m2 from public.mosques order by name asc offset 3 limit 1;
   end if;
 
-  -- Row 1: Fahad Rahiman (Pending Review, 42m, Device acc: ±8.4m, Authentic GPS)
-  insert into public.attendance (
-    user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
-    device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
-    image_sha256, submitted_at
-  ) values (
-    v_u1, v_m1, 'fajr', '2026-11-04', 'pending', 0,
-    8.4, 42.0, false, 'evidence/fahad_fajr_evidence.jpg',
-    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    '2026-11-04 05:22:15+05:30'
-  )
-  on conflict (user_id, prayer_type, prayer_date)
-  do update set status = excluded.status, calculated_distance_m = excluded.calculated_distance_m
-  returning id into v_att1;
+  -- Fallbacks if fewer mosques exist
+  v_m5 := coalesce(v_m5, v_m1);
+  v_m6 := coalesce(v_m6, v_m1);
+  v_m2 := coalesce(v_m2, v_m1);
 
-  -- Row 2: Salman Faris (Flagged, 145m, Device acc: ±65m, Mock GPS Detected)
-  insert into public.attendance (
-    user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
-    device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
-    image_sha256, submitted_at
-  ) values (
-    v_u2, v_m5, 'fajr', '2026-11-04', 'flagged', 0,
-    65.0, 145.0, true, 'evidence/salman_fajr_evidence.jpg',
-    'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
-    '2026-11-04 05:28:40+05:30'
-  )
-  on conflict (user_id, prayer_type, prayer_date)
-  do update set status = excluded.status, is_mock_location = excluded.is_mock_location
-  returning id into v_att2;
+  -- 3. Only insert sample queue items if at least one valid profile and mosque exist
+  if v_u1 is not null and v_m1 is not null then
+    -- Row 1: Pending Review (Fajr, 42m, Device acc: ±8.4m, Authentic GPS)
+    insert into public.attendance (
+      user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
+      device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
+      image_sha256, submitted_at
+    ) values (
+      v_u1, v_m1, 'fajr', current_date, 'pending', 0,
+      8.4, 42.0, false, 'evidence/fahad_fajr_evidence.jpg',
+      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      now() - interval '25 minutes'
+    )
+    on conflict (user_id, prayer_type, prayer_date)
+    do update set
+      status = excluded.status,
+      calculated_distance_m = excluded.calculated_distance_m,
+      is_mock_location = excluded.is_mock_location;
+  end if;
 
-  -- Row 3: Aisha Siddiqa (+5 pts Awarded / Verified, 28m, Device acc: ±12.1m, Authentic GPS)
-  insert into public.attendance (
-    user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
-    device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
-    image_sha256, submitted_at, verified_at
-  ) values (
-    v_u3, v_m6, 'dhuhr', '2026-11-03', 'verified', 5,
-    12.1, 28.0, false, 'evidence/aisha_dhuhr_evidence.jpg',
-    '9876543210abcdef0123456789abcdef9876543210abcdef0123456789abcdef',
-    '2026-11-03 12:45:10+05:30', '2026-11-03 12:46:00+05:30'
-  )
-  on conflict (user_id, prayer_type, prayer_date)
-  do update set status = excluded.status, points_awarded = excluded.points_awarded
-  returning id into v_att3;
+  if v_u2 is not null and v_m5 is not null then
+    -- Row 2: Flagged (Fajr, 145m, Device acc: ±65m, Mock GPS Detected)
+    insert into public.attendance (
+      user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
+      device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
+      image_sha256, submitted_at
+    ) values (
+      v_u2, v_m5, 'fajr', current_date, 'flagged', 0,
+      65.0, 145.0, true, 'evidence/salman_fajr_evidence.jpg',
+      'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
+      now() - interval '18 minutes'
+    )
+    on conflict (user_id, prayer_type, prayer_date)
+    do update set
+      status = excluded.status,
+      is_mock_location = excluded.is_mock_location,
+      calculated_distance_m = excluded.calculated_distance_m;
+  end if;
 
-  -- Row 4: Zameer KP (Pending Review, 68m, Device acc: ±22m, Authentic GPS)
-  insert into public.attendance (
-    user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
-    device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
-    image_sha256, submitted_at
-  ) values (
-    v_u4, v_m2, 'isha', '2026-11-03', 'pending', 0,
-    22.0, 68.0, false, 'evidence/zameer_isha_evidence.jpg',
-    'f1e2d3c4b5a697887766554433221100ffeeddccbbaa99887766554433221100',
-    '2026-11-03 20:12:05+05:30'
-  )
-  on conflict (user_id, prayer_type, prayer_date)
-  do update set status = excluded.status, calculated_distance_m = excluded.calculated_distance_m
-  returning id into v_att4;
+  if v_u3 is not null and v_m6 is not null then
+    -- Row 3: Verified / +5 pts Awarded (Dhuhr, 28m, Device acc: ±12.1m, Authentic GPS)
+    insert into public.attendance (
+      user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
+      device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
+      image_sha256, submitted_at, verified_at
+    ) values (
+      v_u3, v_m6, 'dhuhr', current_date - interval '1 day', 'verified', 5,
+      12.1, 28.0, false, 'evidence/aisha_dhuhr_evidence.jpg',
+      '9876543210abcdef0123456789abcdef9876543210abcdef0123456789abcdef',
+      now() - interval '1 day',
+      now() - interval '23 hours'
+    )
+    on conflict (user_id, prayer_type, prayer_date)
+    do update set
+      status = excluded.status,
+      points_awarded = excluded.points_awarded;
+  end if;
 
+  if v_u4 is not null and v_m2 is not null then
+    -- Row 4: Pending Review (Isha, 68m, Device acc: ±22m, Authentic GPS)
+    insert into public.attendance (
+      user_id, mosque_id, prayer_type, prayer_date, status, points_awarded,
+      device_accuracy_m, calculated_distance_m, is_mock_location, image_storage_path,
+      image_sha256, submitted_at
+    ) values (
+      v_u4, v_m2, 'isha', current_date - interval '1 day', 'pending', 0,
+      22.0, 68.0, false, 'evidence/zameer_isha_evidence.jpg',
+      'f1e2d3c4b5a697887766554433221100ffeeddccbbaa99887766554433221100',
+      now() - interval '1 day'
+    )
+    on conflict (user_id, prayer_type, prayer_date)
+    do update set
+      status = excluded.status,
+      calculated_distance_m = excluded.calculated_distance_m;
+  end if;
+
+exception when others then
+  -- Ignore seed notices so the core schema and procedures always complete successfully
+  raise notice 'Attendance sample seed skipped: %', sqlerrm;
 end;
 $$;
 
@@ -1025,3 +1032,4 @@ $$;
 -- ACTION 5: GET LIVE HEADER COUNTERS (FLAGGED & AWAITING REVIEW)
 -- ------------------------------------------------------------------------------
 -- SELECT public.get_attendance_queue_metrics();
+
