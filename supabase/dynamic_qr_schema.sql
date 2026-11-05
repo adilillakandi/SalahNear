@@ -297,3 +297,4 @@ SELECT * FROM public.mosque_live_qr_attendance_view
 WHERE mosque_id = '<MOSQUE_UUID>'
   AND prayer_type = 'fajr';
 */
+
