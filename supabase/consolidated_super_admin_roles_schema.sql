@@ -36,6 +36,8 @@ end;
 $$;
 
 -- 3. UPDATE GET_ADMIN_DIRECTORY PROCEDURE
+drop function if exists public.get_admin_directory();
+
 create or replace function public.get_admin_directory()
 returns table (
   id uuid,
@@ -81,6 +83,9 @@ $$;
 grant execute on function public.get_admin_directory() to authenticated, anon;
 
 -- 4. UPDATE PROVISION_ADMINISTRATOR PROCEDURE
+drop function if exists public.provision_administrator(text, text, text, text, text, uuid);
+drop function if exists public.provision_administrator;
+
 create or replace function public.provision_administrator(
   p_email text,
   p_password text,
@@ -254,6 +259,9 @@ $$;
 grant execute on function public.provision_administrator(text, text, text, text, text, uuid) to authenticated, anon;
 
 -- 5. COMPATIBILITY ALIAS: CREATE_ADMIN_ACCOUNT
+drop function if exists public.create_admin_account(text, text, text, text, text, uuid);
+drop function if exists public.create_admin_account;
+
 create or replace function public.create_admin_account(
   p_email text,
   p_password text,
@@ -280,3 +288,4 @@ end;
 $$;
 
 grant execute on function public.create_admin_account(text, text, text, text, text, uuid) to authenticated, anon;
+
