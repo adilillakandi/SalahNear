@@ -25,6 +25,7 @@ import {
   Loader2,
   UserCheck,
   UserX,
+  Trash2,
 } from 'lucide-react';
 
 const KERALA_DISTRICTS = [
@@ -65,10 +66,10 @@ export default function AdministratorsPage() {
   const [mosques, setMosques] = useState<MosqueItem[]>([]);
   const [selectedMosqueId, setSelectedMosqueId] = useState<string>('');
 
-  // Confirmation Modal State (Suspend / Reactivate)
+  // Confirmation Modal State (Suspend / Reactivate / Delete)
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    action: 'suspend' | 'activate';
+    action: 'suspend' | 'activate' | 'delete';
     admin: AdminUser | null;
   }>({
     isOpen: false,
@@ -206,13 +207,76 @@ export default function AdministratorsPage() {
     });
   };
 
-  // Execute status toggle
-  const handleConfirmToggleStatus = async () => {
+  // Prompt confirmation dialog before deleting administrator
+  const initiateDelete = (admin: AdminUser) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'delete',
+      admin,
+    });
+  };
+
+  // Execute confirmed action (suspend / activate / delete)
+  const handleConfirmAction = async () => {
     if (!confirmModal.admin) return;
     const admin = confirmModal.admin;
-    const newStatus = confirmModal.action === 'activate';
+    const action = confirmModal.action;
     setConfirmModal({ isOpen: false, action: 'suspend', admin: null });
 
+    // Handle Delete
+    if (action === 'delete') {
+      try {
+        // 1. Try atomic delete_admin_account procedure
+        const { error: rpcError } = await supabase.rpc('delete_admin_account', {
+          p_user_role_id: admin.id,
+          p_delete_auth_user: false,
+          p_reason: 'Deleted by Super Admin',
+        });
+
+        if (rpcError) {
+          // Fallback: try revoke_admin_role procedure
+          const { error: revokeError } = await supabase.rpc('revoke_admin_role', {
+            p_user_role_id: admin.id,
+            p_reason: 'Deleted by Super Admin',
+          });
+
+          if (revokeError) {
+            // Direct delete fallback
+            const { error: deleteError } = await supabase
+              .from('user_roles')
+              .delete()
+              .eq('id', admin.id);
+
+            if (deleteError) throw deleteError;
+
+            await supabase.from('audit_logs').insert({
+              actor_name: 'Super Admin',
+              action: 'ADMIN_DELETED',
+              target_table: 'user_roles',
+              target_id: admin.id,
+              changes: { email: admin.email, full_name: admin.full_name, role: admin.role },
+            });
+          }
+        }
+
+        setAdmins((prev) => prev.filter((a) => a.id !== admin.id));
+
+        setFeedback({
+          type: 'success',
+          text: `Administrator ${admin.full_name} (${admin.email}) has been permanently deleted.`,
+        });
+        setTimeout(() => setFeedback(null), 4000);
+      } catch (err: any) {
+        setFeedback({
+          type: 'error',
+          text: err?.message || 'Failed to delete administrator.',
+        });
+      }
+      return;
+    }
+
+    // Handle Suspend / Activate
+    const newStatus = action === 'activate';
     try {
       // 1. Try atomic toggle_admin_status procedure
       const { error: rpcError } = await supabase.rpc('toggle_admin_status', {
@@ -536,17 +600,26 @@ export default function AdministratorsPage() {
 
                     {/* Actions */}
                     <td className="px-5 py-4 text-right">
-                      <button
-                        onClick={() => initiateToggleStatus(admin)}
-                        title={admin.is_active ? 'Suspend Administrator' : 'Reactivate Administrator'}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                          admin.is_active
-                            ? 'border-red-200 text-red-700 hover:bg-red-50'
-                            : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                        }`}
-                      >
-                        {admin.is_active ? 'Suspend' : 'Activate'}
-                      </button>
+                      <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => initiateToggleStatus(admin)}
+                          title={admin.is_active ? 'Suspend Administrator' : 'Reactivate Administrator'}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            admin.is_active
+                              ? 'border-red-200 text-red-700 hover:bg-red-50'
+                              : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {admin.is_active ? 'Suspend' : 'Activate'}
+                        </button>
+                        <button
+                          onClick={() => initiateDelete(admin)}
+                          title="Delete Administrator"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -556,19 +629,21 @@ export default function AdministratorsPage() {
         </div>
       </div>
 
-      {/* Confirmation Dialog Modal for Suspend / Reactivate */}
+      {/* Confirmation Dialog Modal for Suspend / Reactivate / Delete */}
       {confirmModal.isOpen && confirmModal.admin && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
             <div className="flex items-start space-x-3.5 mb-4">
               <div
                 className={`p-3 rounded-2xl shrink-0 ${
-                  confirmModal.action === 'suspend'
-                    ? 'bg-red-50 text-red-600 border border-red-100'
-                    : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                  confirmModal.action === 'activate'
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                    : 'bg-red-50 text-red-600 border border-red-100'
                 }`}
               >
-                {confirmModal.action === 'suspend' ? (
+                {confirmModal.action === 'delete' ? (
+                  <Trash2 className="w-6 h-6" />
+                ) : confirmModal.action === 'suspend' ? (
                   <UserX className="w-6 h-6" />
                 ) : (
                   <UserCheck className="w-6 h-6" />
@@ -576,18 +651,26 @@ export default function AdministratorsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-bold text-slate-900 leading-snug">
-                  {confirmModal.action === 'suspend'
-                    ? 'Suspend Administrator Access'
-                    : 'Reactivate Administrator Access'}
+                  {confirmModal.action === 'delete' && 'Delete Administrator'}
+                  {confirmModal.action === 'suspend' && 'Suspend Administrator Access'}
+                  {confirmModal.action === 'activate' && 'Reactivate Administrator Access'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  {confirmModal.action === 'suspend' ? (
+                  {confirmModal.action === 'delete' && (
+                    <>
+                      Are you sure you want to permanently delete administrator{' '}
+                      <strong className="text-slate-800 font-semibold">{confirmModal.admin.full_name}</strong>{' '}
+                      ({confirmModal.admin.email})? This will permanently revoke their administrative role and staff permissions. This action cannot be undone.
+                    </>
+                  )}
+                  {confirmModal.action === 'suspend' && (
                     <>
                       Are you sure you want to suspend access for{' '}
                       <strong className="text-slate-800 font-semibold">{confirmModal.admin.full_name}</strong>{' '}
                       ({confirmModal.admin.email})? They will immediately lose access to the administrative console and verification queue.
                     </>
-                  ) : (
+                  )}
+                  {confirmModal.action === 'activate' && (
                     <>
                       Are you sure you want to restore administrative access for{' '}
                       <strong className="text-slate-800 font-semibold">{confirmModal.admin.full_name}</strong>?
@@ -608,14 +691,16 @@ export default function AdministratorsPage() {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmToggleStatus}
+                onClick={handleConfirmAction}
                 className={`px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-sm transition-colors ${
-                  confirmModal.action === 'suspend'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
+                  confirmModal.action === 'activate'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-red-600 hover:bg-red-700'
                 }`}
               >
-                {confirmModal.action === 'suspend' ? 'Yes, Suspend Account' : 'Yes, Reactivate Account'}
+                {confirmModal.action === 'delete' && 'Yes, Delete Administrator'}
+                {confirmModal.action === 'suspend' && 'Yes, Suspend Account'}
+                {confirmModal.action === 'activate' && 'Yes, Reactivate Account'}
               </button>
             </div>
           </div>

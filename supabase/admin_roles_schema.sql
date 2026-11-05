@@ -594,6 +594,89 @@ $$;
 grant execute on function public.revoke_admin_role(uuid, text) to authenticated, anon;
 
 -- ==============================================================================
+-- 7B. ATOMIC STORED PROCEDURE: DELETE ADMINISTRATOR ACCOUNT
+-- Permanently deletes staff user_role, unlinks mosque_admins, and logs audit
+-- ==============================================================================
+create or replace function public.delete_admin_account(
+  p_user_role_id uuid,
+  p_delete_auth_user boolean default false,
+  p_reason text default 'Deleted by Super Admin'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_user_id uuid;
+  v_role text;
+  v_email text;
+  v_name text;
+begin
+  select
+    ur.user_id,
+    ur.role,
+    coalesce(p.full_name, 'Administrative Officer'),
+    coalesce(u.email, p.email, 'admin@salahnear.org')
+  into v_user_id, v_role, v_name, v_email
+  from public.user_roles ur
+  left join public.profiles p on p.id = ur.user_id
+  left join auth.users u on u.id = ur.user_id
+  where ur.id = p_user_role_id;
+
+  if not found then
+    raise exception 'Administrative record with ID % not found', p_user_role_id;
+  end if;
+
+  -- 1. Unlink mosque_admins
+  delete from public.mosque_admins where user_id = v_user_id;
+
+  -- 2. Delete from user_roles
+  delete from public.user_roles where id = p_user_role_id;
+
+  -- 3. Optionally delete auth.users & profiles if requested
+  if p_delete_auth_user then
+    delete from auth.users where id = v_user_id;
+    delete from public.profiles where id = v_user_id;
+  end if;
+
+  -- 4. Record audit log
+  insert into public.audit_logs (
+    actor_id,
+    actor_name,
+    action,
+    target_table,
+    target_id,
+    reason,
+    changes
+  ) values (
+    auth.uid(),
+    'Super Admin',
+    'ADMIN_DELETED',
+    'user_roles',
+    p_user_role_id::text,
+    p_reason,
+    jsonb_build_object(
+      'user_id', v_user_id,
+      'full_name', v_name,
+      'email', v_email,
+      'role', v_role,
+      'deleted_auth_user', p_delete_auth_user,
+      'reason', p_reason
+    )
+  );
+
+  return jsonb_build_object(
+    'success', true,
+    'role_id', p_user_role_id,
+    'user_id', v_user_id
+  );
+end;
+$$;
+
+grant execute on function public.delete_admin_account(uuid, boolean, text) to authenticated, anon;
+
+-- ==============================================================================
 -- 8. SEEDING / BOOTSTRAP INITIAL STAFF ACCOUNTS (SAFE IDEMPOTENT BLOCK)
 -- Sets up default platform staff if not already present
 -- ==============================================================================
@@ -718,4 +801,12 @@ SELECT public.revoke_admin_role(
   '<USER_ROLE_UUID>'::uuid,
   'Staff departed organisation'
 );
+
+-- [ACTION 6: DELETE ADMINISTRATOR PERMANENTLY]
+SELECT public.delete_admin_account(
+  '<USER_ROLE_UUID>'::uuid,
+  false, -- Set to true if you also want to remove auth user and profile
+  'Permanently removed by Super Admin'
+);
 */
+
