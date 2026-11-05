@@ -26,16 +26,15 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
     return <main className="min-h-screen w-full bg-slate-950">{children}</main>;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center text-slate-400 text-xs">
-        Redirecting to login...
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen flex w-full text-slate-800 bg-slate-50 overflow-hidden">
+    <div className="h-screen flex w-full text-slate-800 bg-slate-50 overflow-hidden relative">
+      {!isAuthenticated && (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center text-slate-400 text-xs gap-3">
+          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <span>Redirecting to login portal...</span>
+        </div>
+      )}
+
       {/* Fixed Left Sidebar - does not scroll with page */}
       <Sidebar />
 

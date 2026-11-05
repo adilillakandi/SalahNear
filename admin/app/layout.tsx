@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   description: 'Operations, mosque verification, and attendance integrity for Kerala Mosques',
 };
 
+// Next.js 16 Partial Prefetching / Instant Navigation validation flag
+export const instant = false;
+
 export default function RootLayout({
   children,
 }: {
