@@ -33,7 +33,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
     name: 'Dashboard Overview',
     href: '/',
     icon: LayoutDashboard,
-    allowedRoles: ['super_admin', 'state_admin', 'district_admin', 'mosque_admin', 'attendance_reviewer', 'support_admin'],
+    allowedRoles: ['super_admin', 'mosque_admin'],
   },
   {
     name: 'Admin Management',
@@ -45,20 +45,20 @@ const ALL_NAV_ITEMS: NavItem[] = [
     name: 'Mosque Directory',
     href: '/mosques',
     icon: Building2,
-    allowedRoles: ['super_admin', 'state_admin', 'district_admin', 'mosque_admin'],
+    allowedRoles: ['super_admin', 'mosque_admin'],
   },
   {
     name: 'Attendance Review',
     href: '/attendance',
     icon: CheckCircle2,
     badge: '4',
-    allowedRoles: ['super_admin', 'state_admin', 'attendance_reviewer'],
+    allowedRoles: ['super_admin'],
   },
   {
     name: 'Iqamah Timetables',
     href: '/schedules',
     icon: Clock,
-    allowedRoles: ['super_admin', 'state_admin', 'district_admin', 'mosque_admin'],
+    allowedRoles: ['super_admin', 'mosque_admin'],
   },
   {
     name: 'Mosque QR Display',
@@ -70,7 +70,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
     name: 'Users & Moderation',
     href: '/users',
     icon: Users,
-    allowedRoles: ['super_admin', 'state_admin', 'support_admin'],
+    allowedRoles: ['super_admin'],
   },
   {
     name: 'Mosque Events',
@@ -83,13 +83,13 @@ const ALL_NAV_ITEMS: NavItem[] = [
     href: '/support',
     icon: LifeBuoy,
     badge: '2',
-    allowedRoles: ['super_admin', 'support_admin'],
+    allowedRoles: ['super_admin'],
   },
   {
     name: 'System Audit Logs',
     href: '/audit',
     icon: FileText,
-    allowedRoles: ['super_admin', 'state_admin', 'district_admin', 'attendance_reviewer', 'support_admin'],
+    allowedRoles: ['super_admin'],
   },
 ];
 
@@ -107,28 +107,12 @@ export default function Sidebar() {
   const roleLabel =
     role === 'super_admin'
       ? 'Super Administrator'
-      : role === 'mosque_admin'
-      ? 'Mosque Administrator'
-      : role === 'district_admin'
-      ? 'District Administrator'
-      : role === 'attendance_reviewer'
-      ? 'Attendance Reviewer'
-      : role === 'support_admin'
-      ? 'Support & Dispute Admin'
-      : 'State Administrator';
+      : 'Mosque Administrator';
 
   const scopeLabel =
     role === 'super_admin'
       ? 'Kerala Statewide'
-      : role === 'mosque_admin'
-      ? 'Mishkal Mosque, Kuttichira'
-      : role === 'district_admin'
-      ? 'Kozhikode District'
-      : role === 'attendance_reviewer'
-      ? 'Evidence Review Queue'
-      : role === 'support_admin'
-      ? 'Dispute Resolution'
-      : 'Kerala State';
+      : 'Mishkal Mosque, Kuttichira';
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800 h-screen sticky top-0 shrink-0 z-30 select-none">

@@ -202,34 +202,20 @@ export default function LoginPage() {
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               1-Click Demo Evaluation Profiles
             </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-2 gap-3 text-xs">
               <button
                 onClick={() => quickDemoLogin('super_admin')}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
+                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
               >
                 <div className="font-semibold text-emerald-400">Super Admin</div>
-                <div className="text-[10px] text-slate-400">All Kerala Control</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">All Kerala Control</div>
               </button>
               <button
                 onClick={() => quickDemoLogin('mosque_admin', 'm1')}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
+                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
               >
                 <div className="font-semibold text-amber-400">Mosque Admin</div>
-                <div className="text-[10px] text-slate-400">Mishkal Mosque</div>
-              </button>
-              <button
-                onClick={() => quickDemoLogin('attendance_reviewer')}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
-              >
-                <div className="font-semibold text-blue-400">Reviewer</div>
-                <div className="text-[10px] text-slate-400">Anti-Fraud Queue</div>
-              </button>
-              <button
-                onClick={() => quickDemoLogin('support_admin')}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
-              >
-                <div className="font-semibold text-purple-400">Support Admin</div>
-                <div className="text-[10px] text-slate-400">Disputes & Tickets</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">Mishkal Mosque Venue</div>
               </button>
             </div>
           </div>

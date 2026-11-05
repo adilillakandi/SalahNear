@@ -73,7 +73,7 @@ export default function DashboardOverviewPage() {
       const { data: rpcData, error: rpcError } = await supabase.rpc(
         'get_dashboard_overview_metrics',
         {
-          p_district: role === 'district_admin' ? activeDistrict || 'Kozhikode' : null,
+          p_district: null,
           p_mosque_id: role === 'mosque_admin' ? activeMosqueId || null : null,
         }
       );
@@ -217,12 +217,7 @@ export default function DashboardOverviewPage() {
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-2 border border-emerald-500/30">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="uppercase tracking-wider font-mono">
-              {role.replace('_', ' ')} •{' '}
-              {role === 'mosque_admin'
-                ? assignedMosqueName
-                : role === 'district_admin'
-                ? `${activeDistrict || 'Kozhikode'} District`
-                : 'Kerala Statewide'}
+              {role === 'mosque_admin' ? `MOSQUE ADMIN • ${assignedMosqueName}` : 'SUPER ADMIN • KERALA STATEWIDE'}
             </span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -231,13 +226,7 @@ export default function DashboardOverviewPage() {
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
             {role === 'mosque_admin'
               ? `Operational console for ${assignedMosqueName}. Managing prayer timetables, dynamic QR entrance check-ins, and mosque announcements.`
-              : role === 'district_admin'
-              ? `Overseeing mosque directory verification, geofence radius calibration, and local prayer schedules across ${activeDistrict || 'Kozhikode'} district.`
-              : role === 'attendance_reviewer'
-              ? 'Inspecting flagged attendance submissions, camera evidence photos, GPS satellite fixes, and anti-fraud telemetry.'
-              : role === 'support_admin'
-              ? 'Arbitrating member dispute appeals, streak corrections, manual points adjustments, and account recoveries.'
-              : 'Centralized command center for congregational prayer verification, mosque directory pipeline, and gamification across all 14 Kerala districts.'}
+              : 'Centralized command center for congregational prayer verification, attendance reviews, support disputes, mosque directory pipeline, and gamification across all 14 Kerala districts.'}
           </p>
         </div>
 
@@ -261,23 +250,22 @@ export default function DashboardOverviewPage() {
           )}
 
           {role === 'super_admin' && (
-            <Link
-              href="/administrators"
-              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors"
-            >
-              <UserCog className="w-4 h-4" />
-              <span>Manage Platform Staff</span>
-            </Link>
-          )}
-
-          {role === 'attendance_reviewer' && (
-            <Link
-              href="/attendance"
-              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors"
-            >
-              <ShieldAlert className="w-4 h-4" />
-              <span>Review Submissions</span>
-            </Link>
+            <>
+              <Link
+                href="/attendance"
+                className="inline-flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/10 transition-colors"
+              >
+                <ShieldAlert className="w-4 h-4 text-emerald-400" />
+                <span>Review Submissions</span>
+              </Link>
+              <Link
+                href="/administrators"
+                className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors"
+              >
+                <UserCog className="w-4 h-4" />
+                <span>Manage Staff</span>
+              </Link>
+            </>
           )}
         </div>
       </div>
@@ -363,31 +351,24 @@ export default function DashboardOverviewPage() {
         {/* Card 4: Congregants / Streaks */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              {role === 'support_admin' ? 'Open Disputes' : 'Active Congregants'}
-            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Active Congregants</span>
             <div className="p-2 bg-orange-50 text-orange-600 rounded-xl">
-              {role === 'support_admin' ? (
-                <LifeBuoy className="w-5 h-5" />
-              ) : (
-                <Flame className="w-5 h-5" />
-              )}
+              <Flame className="w-5 h-5" />
             </div>
           </div>
           <div className="text-2xl font-bold text-slate-900">
             {isLoading ? (
               <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
-            ) : role === 'support_admin' ? (
-              stats.openDisputesCount
             ) : (
               stats.totalUsers
             )}
           </div>
-          <div className="mt-2 text-xs text-slate-500">
-            {role === 'support_admin' ? (
-              <span className="text-purple-700 font-semibold">Active Member Inquiries</span>
-            ) : (
-              <span>Maintaining daily congregational streaks</span>
+          <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
+            <span>Daily prayer streaks</span>
+            {stats.openDisputesCount > 0 && (
+              <span className="text-purple-600 font-semibold font-mono text-[11px]">
+                {stats.openDisputesCount} disputes
+              </span>
             )}
           </div>
         </div>

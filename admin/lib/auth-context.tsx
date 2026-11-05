@@ -78,18 +78,9 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       full_name:
         newRole === 'super_admin'
           ? 'Dr. Abdul Rahman Koya'
-          : newRole === 'mosque_admin'
-          ? 'Imam Rashid Moulavi'
-          : newRole === 'district_admin'
-          ? 'Zuhair Ahmed'
-          : newRole === 'attendance_reviewer'
-          ? 'Musthafa Kamal'
-          : newRole === 'support_admin'
-          ? 'Fathima Beegum'
-          : 'State Overseer',
+          : 'Imam Rashid Moulavi',
       role: newRole,
       state: 'Kerala',
-      district: newRole === 'district_admin' ? 'Kozhikode' : undefined,
       assigned_mosques: newRole === 'mosque_admin' ? [mosqueId] : undefined,
       is_active: true,
       created_at: '2026-09-01T00:00:00Z',

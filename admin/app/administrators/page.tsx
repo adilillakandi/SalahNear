@@ -81,7 +81,7 @@ export default function AdministratorsPage() {
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePassword, setInvitePassword] = useState('');
-  const [inviteRole, setInviteRole] = useState<AdminRole>('district_admin');
+  const [inviteRole, setInviteRole] = useState<AdminRole>('mosque_admin');
   const [inviteDistrict, setInviteDistrict] = useState('Kozhikode');
 
   // Created Credentials Modal Display
@@ -333,7 +333,7 @@ export default function AdministratorsPage() {
         p_password: invitePassword,
         p_full_name: inviteName.trim(),
         p_role: inviteRole,
-        p_district: inviteRole === 'district_admin' ? inviteDistrict : null,
+        p_district: null,
         p_mosque_id: inviteRole === 'mosque_admin' ? selectedMosqueId : null,
       });
 
@@ -344,7 +344,7 @@ export default function AdministratorsPage() {
           p_password: invitePassword,
           p_full_name: inviteName.trim(),
           p_role: inviteRole,
-          p_district: inviteRole === 'district_admin' ? inviteDistrict : null,
+          p_district: null,
           p_mosque_id: inviteRole === 'mosque_admin' ? selectedMosqueId : null,
         });
 
@@ -354,16 +354,10 @@ export default function AdministratorsPage() {
       }
 
       // Compute display scope
-      let displayScope = 'Statewide (All Kerala)';
-      if (inviteRole === 'district_admin') {
-        displayScope = `${inviteDistrict} District`;
-      } else if (inviteRole === 'mosque_admin') {
-        displayScope = mosques.find((m) => m.id === selectedMosqueId)?.name || 'Assigned Mosque';
-      } else if (inviteRole === 'attendance_reviewer') {
-        displayScope = 'Kerala Verification Queue';
-      } else if (inviteRole === 'support_admin') {
-        displayScope = 'User Support & Disputes';
-      }
+      const displayScope =
+        inviteRole === 'mosque_admin'
+          ? mosques.find((m) => m.id === selectedMosqueId)?.name || 'Assigned Mosque Venue'
+          : 'Statewide (All Kerala)';
 
       // Present credentials modal for Super Admin handoff
       setCreatedCredentials({
@@ -497,11 +491,7 @@ export default function AdministratorsPage() {
         >
           <option value="all">All Administrative Roles</option>
           <option value="super_admin">Super Admin</option>
-          <option value="state_admin">State Admin</option>
-          <option value="district_admin">District Admin</option>
           <option value="mosque_admin">Mosque Admin</option>
-          <option value="attendance_reviewer">Attendance Reviewer</option>
-          <option value="support_admin">Support Admin</option>
         </select>
       </div>
 
@@ -566,13 +556,7 @@ export default function AdministratorsPage() {
                     {/* Authorized Scope */}
                     <td className="px-4 py-4">
                       <div className="text-xs text-slate-700 font-medium">
-                        {admin.role === 'super_admin' && 'Statewide (All Kerala)'}
-                        {admin.role === 'state_admin' && 'Statewide (All Kerala)'}
-                        {admin.role === 'district_admin' && (admin.district ? `${admin.district} District` : 'Assigned District')}
-                        {admin.role === 'mosque_admin' && (admin.assigned_mosques?.[0] || 'Assigned Mosque Venue')}
-                        {admin.role === 'attendance_reviewer' && 'Kerala Verification Queue'}
-                        {admin.role === 'support_admin' && 'User Support & Disputes'}
-                        {admin.role === ('reviewer' as any) && 'Kerala Verification Queue'}
+                        {admin.role === 'super_admin' ? 'Statewide (All Kerala)' : (admin.assigned_mosques?.[0] || 'Assigned Mosque Venue')}
                       </div>
                     </td>
 
@@ -783,29 +767,10 @@ export default function AdministratorsPage() {
                   onChange={(e) => setInviteRole(e.target.value as AdminRole)}
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
                 >
-                  <option value="state_admin">State Admin (Statewide Oversight)</option>
-                  <option value="district_admin">District Admin (District Mosques & Verification)</option>
                   <option value="mosque_admin">Mosque Admin (Timetable & QR Display)</option>
-                  <option value="attendance_reviewer">Attendance Reviewer (Proof Verification)</option>
-                  <option value="support_admin">Support Admin (User Disputes & Help)</option>
+                  <option value="super_admin">Super Admin (Statewide Oversight)</option>
                 </select>
               </div>
-
-              {/* Dynamic District Selector */}
-              {inviteRole === 'district_admin' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Kerala District</label>
-                  <select
-                    value={inviteDistrict}
-                    onChange={(e) => setInviteDistrict(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
-                  >
-                    {KERALA_DISTRICTS.filter((d) => d !== 'All Districts').map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {/* Dynamic Mosque Selector */}
               {inviteRole === 'mosque_admin' && (

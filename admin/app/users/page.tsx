@@ -311,7 +311,6 @@ export default function UsersModerationPage() {
         id: newUserId,
         full_name: adminFullName,
         state: 'Kerala',
-        district: adminRole === 'district_admin' ? adminDistrict : undefined,
         home_mosque_id: adminRole === 'mosque_admin' && adminMosqueId ? adminMosqueId : undefined,
       });
 
@@ -320,7 +319,6 @@ export default function UsersModerationPage() {
         user_id: newUserId,
         role: adminRole,
         state: 'Kerala',
-        district: adminRole === 'district_admin' ? adminDistrict : null,
         is_active: true,
       });
 
@@ -342,7 +340,6 @@ export default function UsersModerationPage() {
           full_name: adminFullName,
           email: adminEmail,
           role: adminRole,
-          district: adminRole === 'district_admin' ? adminDistrict : null,
           mosque_name: adminRole === 'mosque_admin' ? adminMosqueName : null,
         },
       });
@@ -796,32 +793,9 @@ export default function UsersModerationPage() {
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
                 >
                   <option value="mosque_admin">Mosque Administrator (Daily Timetable & QR Kiosk)</option>
-                  <option value="district_admin">District Administrator (District Mosques & Verification)</option>
-                  <option value="attendance_reviewer">Attendance Reviewer (Proof Audit & Telemetry)</option>
-                  <option value="support_admin">Support Administrator (Disputes & Inquiries)</option>
-                  <option value="state_admin">State Administrator (Statewide Overseer)</option>
+                  <option value="super_admin">Super Administrator (Full Statewide Control)</option>
                 </select>
               </div>
-
-              {/* Scope Selection: District */}
-              {adminRole === 'district_admin' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Assigned District
-                  </label>
-                  <select
-                    value={adminDistrict}
-                    onChange={(e) => setAdminDistrict(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
-                  >
-                    {KERALA_DISTRICTS.map((dist) => (
-                      <option key={dist} value={dist}>
-                        {dist} District
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {/* Scope Selection: Mosque */}
               {adminRole === 'mosque_admin' && (

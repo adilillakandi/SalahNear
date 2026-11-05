@@ -18,9 +18,6 @@ import {
 const ROLE_OPTIONS: { role: AdminRole; label: string; scope: string }[] = [
   { role: 'super_admin', label: 'Super Admin', scope: 'Statewide' },
   { role: 'mosque_admin', label: 'Mosque Admin', scope: 'Mishkal Mosque' },
-  { role: 'district_admin', label: 'District Admin', scope: 'Kozhikode' },
-  { role: 'attendance_reviewer', label: 'Attendance Reviewer', scope: 'Queue' },
-  { role: 'support_admin', label: 'Support Admin', scope: 'Disputes' },
 ];
 
 export default function Header() {

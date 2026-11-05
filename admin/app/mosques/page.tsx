@@ -47,9 +47,7 @@ export default function MosquesPage() {
   const [mosques, setMosques] = useState<Mosque[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState(
-    role === 'district_admin' && activeDistrict ? activeDistrict : 'All Districts'
-  );
+  const [selectedDistrict, setSelectedDistrict] = useState('All Districts');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   
   // Modals state
@@ -499,9 +497,8 @@ export default function MosquesPage() {
             <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <select
               value={selectedDistrict}
-              disabled={role === 'district_admin'}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white disabled:opacity-60"
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
             >
               {KERALA_DISTRICTS.map((d) => (
                 <option key={d} value={d}>

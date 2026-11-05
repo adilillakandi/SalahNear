@@ -1,10 +1,6 @@
 export type AdminRole =
   | 'super_admin'
-  | 'state_admin'
-  | 'district_admin'
-  | 'mosque_admin'
-  | 'attendance_reviewer'
-  | 'support_admin';
+  | 'mosque_admin';
 
 export interface AdminUser {
   id: string;
