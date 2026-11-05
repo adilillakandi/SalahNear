@@ -18,7 +18,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn } = useAdminAuth();
+  const { signIn, isAuthenticated, isLoading } = useAdminAuth();
 
   const [activeTab, setActiveTab] = useState<'super_admin' | 'mosque_admin'>('super_admin');
   const [email, setEmail] = useState('');
@@ -27,6 +27,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(true);
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   // Clear any default values or browser-injected autofill on mount and tab switch
   useEffect(() => {
