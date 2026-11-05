@@ -184,3 +184,4 @@ end;
 $$;
 
 grant execute on function public.get_dashboard_overview_metrics(text, uuid) to authenticated, anon;
+

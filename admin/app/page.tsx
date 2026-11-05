@@ -22,7 +22,6 @@ import {
   ShieldAlert,
   RotateCcw,
   Loader2,
-  Activity,
   Sparkles,
 } from 'lucide-react';
 
@@ -32,16 +31,6 @@ interface DistrictCoverageItem {
   verified: number;
   staging?: number;
   prayersToday: number;
-}
-
-interface RecentAuditItem {
-  id: string;
-  action: string;
-  actor_name: string;
-  entity_type: string;
-  entity_id: string;
-  reason?: string;
-  created_at: string;
 }
 
 interface MosqueTimetableItem {
@@ -70,7 +59,6 @@ export default function DashboardOverviewPage() {
   });
 
   const [districtStats, setDistrictStats] = useState<DistrictCoverageItem[]>([]);
-  const [recentAuditLogs, setRecentAuditLogs] = useState<RecentAuditItem[]>([]);
   const [mosqueTimetable, setMosqueTimetable] = useState<MosqueTimetableItem | null>(null);
   const [assignedMosqueName, setAssignedMosqueName] = useState<string>('Assigned Mosque');
 
@@ -105,10 +93,6 @@ export default function DashboardOverviewPage() {
 
         if (rpcData.district_summary && Array.isArray(rpcData.district_summary)) {
           setDistrictStats(rpcData.district_summary);
-        }
-
-        if (rpcData.recent_audit_logs && Array.isArray(rpcData.recent_audit_logs)) {
-          setRecentAuditLogs(rpcData.recent_audit_logs);
         }
 
         if (rpcData.today_iqamah) {
@@ -188,27 +172,6 @@ export default function DashboardOverviewPage() {
             verified: d.verified_mosques,
             staging: d.staging_mosques,
             prayersToday: d.today_prayers_count,
-          }))
-        );
-      }
-
-      // Fetch recent audit logs
-      const { data: auditData } = await supabase
-        .from('audit_logs')
-        .select('id, action, actor_name, target_table, target_id, reason, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (auditData) {
-        setRecentAuditLogs(
-          auditData.map((a: any) => ({
-            id: a.id,
-            action: a.action,
-            actor_name: a.actor_name || 'Admin Officer',
-            entity_type: a.target_table || 'system',
-            entity_id: a.target_id || '',
-            reason: a.reason,
-            created_at: a.created_at,
           }))
         );
       }
@@ -546,129 +509,80 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
-      {/* Two Column Section: Recent Compliance Audit Trail & Quick Action Shortcuts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Audit Log Stream (2 Cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-base font-bold text-slate-900">Recent Administrative Events</h2>
-            </div>
-            <Link
-              href="/audit"
-              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-            >
-              <span>View Full Audit Log</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
+      {/* Console Shortcuts */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Console Shortcuts</h2>
+            <p className="text-xs text-slate-500">Fast access to operational modules and verification tools</p>
           </div>
-
-          {isLoading ? (
-            <div className="p-8 text-center text-slate-400">
-              <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto mb-2" />
-              <span className="text-xs">Loading audit stream...</span>
-            </div>
-          ) : recentAuditLogs.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs">
-              No recent administrative actions recorded.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 text-xs">
-              {recentAuditLogs.map((log) => (
-                <div key={log.id} className="py-3 flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        {log.action}
-                      </span>
-                      <span className="font-semibold text-slate-800">{log.actor_name}</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px] leading-relaxed">
-                      {log.reason || `Updated ${log.entity_type} record.`}
-                    </p>
-                  </div>
-                  <span className="text-[11px] text-slate-400 font-mono shrink-0">
-                    {new Date(log.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Quick Operations Shortcuts (1 Col) */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <h2 className="text-base font-bold text-slate-900 pb-2 border-b border-slate-100">
-            Console Shortcuts
-          </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <Link
+            href="/mosques"
+            className="p-3.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center space-x-3 group"
+          >
+            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 truncate">Mosque Directory</div>
+              <div className="text-[11px] text-slate-400 truncate">Verify OSM & geofence</div>
+            </div>
+          </Link>
 
-          <div className="space-y-2">
-            <Link
-              href="/mosques"
-              className="p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center space-x-3 group"
-            >
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                <Building2 className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-slate-800">Mosque Directory</div>
-                <div className="text-[11px] text-slate-400">Verify OSM candidates & geofence</div>
-              </div>
-            </Link>
+          <Link
+            href="/attendance"
+            className="p-3.5 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all flex items-center space-x-3 group"
+          >
+            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 truncate">Attendance Review</div>
+              <div className="text-[11px] text-slate-400 truncate">Camera & GPS proofs</div>
+            </div>
+          </Link>
 
-            <Link
-              href="/attendance"
-              className="p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center space-x-3 group"
-            >
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-slate-800">Attendance Review</div>
-                <div className="text-[11px] text-slate-400">Inspect camera proofs & GPS signals</div>
-              </div>
-            </Link>
+          <Link
+            href="/events"
+            className="p-3.5 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all flex items-center space-x-3 group"
+          >
+            <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors shrink-0">
+              <CalendarDays className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 truncate">Mosque Events</div>
+              <div className="text-[11px] text-slate-400 truncate">Khutbah & Notices</div>
+            </div>
+          </Link>
 
-            <Link
-              href="/events"
-              className="p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center space-x-3 group"
-            >
-              <div className="p-2 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                <CalendarDays className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-slate-800">Mosque Events</div>
-                <div className="text-[11px] text-slate-400">Announcements & Khutbah schedule</div>
-              </div>
-            </Link>
+          <Link
+            href="/support"
+            className="p-3.5 rounded-xl border border-slate-100 hover:border-purple-200 hover:bg-purple-50/30 transition-all flex items-center space-x-3 group"
+          >
+            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0">
+              <LifeBuoy className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 truncate">Support & Disputes</div>
+              <div className="text-[11px] text-slate-400 truncate">Appeals & points</div>
+            </div>
+          </Link>
 
-            <Link
-              href="/support"
-              className="p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center space-x-3 group"
-            >
-              <div className="p-2 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                <LifeBuoy className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-slate-800">Support & Disputes</div>
-                <div className="text-[11px] text-slate-400">Arbitrate appeals & award points</div>
-              </div>
-            </Link>
-
-            <Link
-              href="/audit"
-              className="p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center space-x-3 group"
-            >
-              <div className="p-2 rounded-lg bg-slate-100 text-slate-600 group-hover:bg-slate-800 group-hover:text-white transition-colors">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-slate-800">Compliance Audit</div>
-                <div className="text-[11px] text-slate-400">Immutable ledger & CSV export</div>
-              </div>
-            </Link>
-          </div>
+          <Link
+            href="/audit"
+            className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center space-x-3 group"
+          >
+            <div className="p-2.5 rounded-xl bg-slate-100 text-slate-600 group-hover:bg-slate-800 group-hover:text-white transition-colors shrink-0">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 truncate">Compliance Audit</div>
+              <div className="text-[11px] text-slate-400 truncate">Immutable ledger & CSV</div>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

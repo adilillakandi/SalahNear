@@ -458,3 +458,4 @@ SELECT public.delete_support_case(
   'Duplicate submission'
 );
 */
+
