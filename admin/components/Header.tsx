@@ -24,7 +24,7 @@ export default function Header() {
   const { role, adminUser, switchRole, signOut } = useAdminAuth();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
-  const cleanName = (adminUser?.full_name || 'Dr. Abdul Rahman Koya')
+  const cleanName = (adminUser?.full_name || 'Adil KT')
     .replace(/\s*\([^)]*\)/g, '')
     .trim();
 

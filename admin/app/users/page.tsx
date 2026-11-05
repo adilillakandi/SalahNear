@@ -732,7 +732,7 @@ export default function UsersModerationPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Imam Rashid Moulavi"
+                  placeholder="e.g. Mosque Administrator"
                   value={adminFullName}
                   onChange={(e) => setAdminFullName(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"

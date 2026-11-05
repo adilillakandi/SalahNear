@@ -146,7 +146,7 @@ export default function Sidebar() {
     }
   };
 
-  const cleanName = (adminUser?.full_name || 'Dr. Abdul Rahman Koya')
+  const cleanName = (adminUser?.full_name || 'Adil KT')
     .replace(/\s*\([^)]*\)/g, '')
     .trim();
 

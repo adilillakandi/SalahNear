@@ -681,66 +681,16 @@ grant execute on function public.delete_admin_account(uuid, boolean, text) to au
 -- Sets up default platform staff if not already present
 -- ==============================================================================
 do $$
-declare
-  v_super_admin_id uuid;
-  v_district_admin_id uuid;
-  v_reviewer_id uuid;
-  v_mosque_id uuid;
 begin
-  -- Fetch existing mosque (e.g. Mishkal Mosque) or fallback
-  select id into v_mosque_id from public.mosques where name ilike '%mishkal%' limit 1;
-
-  -- Provision Super Admin
+  -- Provision Real Super Admin (Adil KT)
   perform public.provision_administrator(
-    'superadmin@salahnear.org',
-    'SuperAdmin#2026',
-    'Dr. Abdul Rahman Koya',
+    'adhilktillakandi@gmail.com',
+    'adilSalaNear66',
+    'Adil KT',
     'super_admin',
     null,
     null
   );
-
-  -- Provision Kozhikode District Admin
-  perform public.provision_administrator(
-    'district.calicut@salahnear.org',
-    'CalicutAdmin#2026',
-    'Zuhair Ahmed',
-    'district_admin',
-    'Kozhikode',
-    null
-  );
-
-  -- Provision Attendance Reviewer
-  perform public.provision_administrator(
-    'reviewer.kamal@salahnear.org',
-    'ReviewerKamal#2026',
-    'Musthafa Kamal',
-    'attendance_reviewer',
-    null,
-    null
-  );
-
-  -- Provision Support Admin
-  perform public.provision_administrator(
-    'support.fathima@salahnear.org',
-    'SupportFathima#2026',
-    'Fathima Beegum',
-    'support_admin',
-    null,
-    null
-  );
-
-  -- Provision Mosque Admin (if mosque found)
-  if v_mosque_id is not null then
-    perform public.provision_administrator(
-      'imam@mishkalmosque.org',
-      'MishkalAdmin#2026',
-      'Imam Rashid Moulavi',
-      'mosque_admin',
-      'Kozhikode',
-      v_mosque_id
-    );
-  end if;
 end;
 $$;
 

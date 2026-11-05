@@ -289,3 +289,39 @@ $$;
 
 grant execute on function public.create_admin_account(text, text, text, text, text, uuid) to authenticated, anon;
 
+-- 6. PROVISION REAL SUPER ADMIN (ADIL KT) & DECOMMISSION MOCK ACCOUNTS
+do $$
+declare
+  v_koya_id uuid;
+  v_moulavi_id uuid;
+begin
+  -- 1. Provision Official Super Admin: Adil KT
+  perform public.provision_administrator(
+    'adhilktillakandi@gmail.com',
+    'adilSalaNear66',
+    'Adil KT',
+    'super_admin',
+    null,
+    null
+  );
+
+  -- 2. Decommission placeholder Super Admin (Dr. Abdul Rahman Koya)
+  select id into v_koya_id from auth.users where email in ('superadmin@salahnear.org', 'superadmin@salahnear.com');
+  if v_koya_id is not null then
+    delete from public.mosque_admins where user_id = v_koya_id;
+    delete from public.user_roles where user_id = v_koya_id;
+    delete from public.profiles where id = v_koya_id;
+    delete from auth.users where id = v_koya_id;
+  end if;
+
+  -- 3. Decommission placeholder Mosque Admin (Imam Rashid Moulavi)
+  select id into v_moulavi_id from auth.users where email in ('imam@mishkalmosque.org', 'mosque_admin@salahnear.org');
+  if v_moulavi_id is not null then
+    delete from public.mosque_admins where user_id = v_moulavi_id;
+    delete from public.user_roles where user_id = v_moulavi_id;
+    delete from public.profiles where id = v_moulavi_id;
+    delete from auth.users where id = v_moulavi_id;
+  end if;
+end;
+$$;
+

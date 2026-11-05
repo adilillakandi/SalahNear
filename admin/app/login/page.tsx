@@ -23,8 +23,8 @@ export default function LoginPage() {
   const { signIn, switchRole } = useAdminAuth();
 
   const [activeTab, setActiveTab] = useState<'super_admin' | 'mosque_admin'>('super_admin');
-  const [email, setEmail] = useState('superadmin@salahnear.org');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('adhilktillakandi@gmail.com');
+  const [password, setPassword] = useState('adilSalaNear66');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -32,9 +32,11 @@ export default function LoginPage() {
   const handleTabChange = (tab: 'super_admin' | 'mosque_admin') => {
     setActiveTab(tab);
     if (tab === 'super_admin') {
-      setEmail('superadmin@salahnear.org');
+      setEmail('adhilktillakandi@gmail.com');
+      setPassword('adilSalaNear66');
     } else {
-      setEmail('imam@mishkalmosque.org');
+      setEmail('');
+      setPassword('');
     }
   };
 
@@ -44,11 +46,11 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     try {
-      const ok = await signIn(email, activeTab);
+      const ok = await signIn(email, password, activeTab);
       if (ok) {
         router.push('/');
       } else {
-        setErrorMsg('Invalid administrative credentials or unassigned role.');
+        setErrorMsg('Invalid administrative credentials. Please verify your email and password.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Authentication failed. Please verify credentials.');
@@ -207,15 +209,15 @@ export default function LoginPage() {
                 onClick={() => quickDemoLogin('super_admin')}
                 className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
               >
-                <div className="font-semibold text-emerald-400">Super Admin</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">All Kerala Control</div>
+                <div className="font-semibold text-emerald-400">Adil KT (Super Admin)</div>
+                <div className="text-[10px] text-slate-400 mt-0.5 font-mono">adhilktillakandi@gmail.com</div>
               </button>
               <button
                 onClick={() => quickDemoLogin('mosque_admin', 'm1')}
                 className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
               >
                 <div className="font-semibold text-amber-400">Mosque Admin</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Mishkal Mosque Venue</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">Assigned Mosque Venue</div>
               </button>
             </div>
           </div>
