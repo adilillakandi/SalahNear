@@ -52,15 +52,17 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const savedRole = localStorage.getItem('salahnear_admin_role') as AdminRole;
       const savedUser = localStorage.getItem('salahnear_admin_user');
-      if (savedRole) {
-        setRole(savedRole);
-      }
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         if (parsed.full_name) {
           parsed.full_name = parsed.full_name.replace(/\s*\([^)]*\)/g, '');
         }
         setAdminUser(parsed);
+        setRole(savedRole || parsed.role || 'super_admin');
+        setIsAuthenticated(true);
+      } else if (localStorage.getItem('salahnear_admin_logged_out') === 'true') {
+        setAdminUser(null);
+        setIsAuthenticated(false);
       }
     } catch {
       // Ignore localStorage read errors
@@ -89,6 +91,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('salahnear_admin_role', newRole);
       localStorage.setItem('salahnear_admin_user', JSON.stringify(updatedUser));
+      localStorage.removeItem('salahnear_admin_logged_out');
     } catch {
       // Ignore
     }
@@ -132,6 +135,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         try {
           localStorage.setItem('salahnear_admin_role', 'super_admin');
           localStorage.setItem('salahnear_admin_user', JSON.stringify(superAdminUser));
+          localStorage.removeItem('salahnear_admin_logged_out');
         } catch {
           // Ignore
         }
@@ -192,8 +196,13 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem('salahnear_admin_role');
       localStorage.removeItem('salahnear_admin_user');
+      localStorage.setItem('salahnear_admin_logged_out', 'true');
+      sessionStorage.clear();
     } catch {
       // Ignore
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
     }
   };
 

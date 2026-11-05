@@ -19,6 +19,7 @@ import {
   LifeBuoy,
   UserCog,
   ExternalLink,
+  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -94,7 +95,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { role, adminUser } = useAdminAuth();
+  const { role, adminUser, signOut } = useAdminAuth();
 
   const [counts, setCounts] = useState<{
     attendance: number | null;
@@ -247,9 +248,21 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="pt-2 border-t border-slate-800/60">
-          <div className="font-semibold text-slate-300 truncate text-[11px]">{cleanName}</div>
-          <div className="text-[10px] text-slate-500 truncate">{adminUser?.email}</div>
+        <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-slate-300 truncate text-[11px]">{cleanName}</div>
+            <div className="text-[10px] text-slate-500 truncate">{adminUser?.email}</div>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await signOut();
+            }}
+            title="Sign Out"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors ml-2 shrink-0 cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>

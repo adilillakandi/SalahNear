@@ -108,9 +108,12 @@ export default function Header() {
 
           {/* Logout Icon Button */}
           <button
-            onClick={() => signOut()}
+            type="button"
+            onClick={async () => {
+              await signOut();
+            }}
             title="Sign Out"
-            className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-slate-100 transition-colors ml-1"
+            className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
           </button>
