@@ -6,103 +6,17 @@ import { AuditLogItem } from '@/lib/types';
 import {
   FileText,
   Search,
-  Filter,
   Download,
   Shield,
-  Clock,
-  User,
-  Database,
+  RotateCcw,
+  Loader2,
+  ShieldAlert,
   Code2,
-  Calendar,
 } from 'lucide-react';
 
-const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
-  {
-    id: 'log_1',
-    actor_user_id: 'adm_super_01',
-    actor_name: 'Dr. Abdul Rahman Koya',
-    action: 'MOSQUE_VERIFIED',
-    entity_type: 'mosques',
-    entity_id: 'm1',
-    target_table: 'mosques',
-    target_id: 'm1',
-    before_state: { status: 'pending', attendance_radius_m: 60 },
-    after_state: { status: 'verified', attendance_radius_m: 80 },
-    changes: { name: 'Mishkal Mosque', status: 'verified', attendance_radius_m: 80 },
-    reason: 'Verified through on-site committee visit and Mahal records confirmation',
-    ip_address: '103.112.214.10',
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    created_at: '2026-11-04T07:15:20+05:30',
-  },
-  {
-    id: 'log_2',
-    actor_user_id: 'adm_reviewer_01',
-    actor_name: 'Musthafa Kamal (Attendance Reviewer)',
-    action: 'ATTENDANCE_VERIFIED',
-    entity_type: 'attendance',
-    entity_id: 'att_rev_3',
-    target_table: 'attendance',
-    target_id: 'att_rev_3',
-    before_state: { status: 'pending', points: 0 },
-    after_state: { status: 'verified', points: 5 },
-    changes: { user: 'Aisha Siddiqa', decision: 'verified', points_awarded: 5 },
-    reason: 'Camera proof inside prayer hall with verified SHA-256 and genuine GPS fix',
-    ip_address: '117.204.18.42',
-    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    created_at: '2026-11-04T06:50:12+05:30',
-  },
-  {
-    id: 'log_3',
-    actor_user_id: 'adm_mosque_01',
-    actor_name: 'Imam Rashid Moulavi (Mosque Admin)',
-    action: 'UPDATE_IQAMAH_SCHEDULE',
-    entity_type: 'prayer_schedules',
-    entity_id: 'm1',
-    target_table: 'prayer_schedules',
-    target_id: 'm1',
-    before_state: { fajr_iqamah: '05:25', version: 3 },
-    after_state: { fajr_iqamah: '05:30', version: 4 },
-    changes: { fajr_iqamah: '05:30', version: 4 },
-    reason: 'Seasonal winter twilight timing adjustment approved by Mahal committee',
-    ip_address: '103.88.24.5',
-    created_at: '2026-11-03T18:00:00+05:30',
-  },
-  {
-    id: 'log_4',
-    actor_user_id: 'adm_super_01',
-    actor_name: 'Dr. Abdul Rahman Koya',
-    action: 'POINTS_ADJUSTMENT',
-    entity_type: 'user_points',
-    entity_id: 'u_101',
-    target_table: 'user_points',
-    target_id: 'u_101',
-    before_state: { total_points: 310 },
-    after_state: { total_points: 320 },
-    changes: { delta: 10, reason: 'Verified manual Jummah attendance confirmation' },
-    reason: 'App dispute resolution for network drop during Jummah check-in',
-    ip_address: '103.112.214.10',
-    created_at: '2026-11-02T14:22:00+05:30',
-  },
-  {
-    id: 'log_5',
-    actor_user_id: 'adm_reviewer_01',
-    actor_name: 'Musthafa Kamal (Attendance Reviewer)',
-    action: 'ATTENDANCE_FLAGGED',
-    entity_type: 'attendance',
-    entity_id: 'att_rev_2',
-    target_table: 'attendance',
-    target_id: 'att_rev_2',
-    before_state: { status: 'pending' },
-    after_state: { status: 'flagged' },
-    changes: { user: 'Salman Faris', reason: 'Mock location spoofing detected' },
-    reason: 'Android MockProvider signal active and distance exceeded configured radius',
-    ip_address: '117.204.18.42',
-    created_at: '2026-11-02T05:35:10+05:30',
-  },
-];
-
 export default function AuditLogsPage() {
-  const [logs, setLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
+  const [logs, setLogs] = useState<AuditLogItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [search, setSearch] = useState('');
   const [selectedEntity, setSelectedEntity] = useState('all');
   const [activeLog, setActiveLog] = useState<AuditLogItem | null>(null);
@@ -112,14 +26,28 @@ export default function AuditLogsPage() {
   }, []);
 
   const fetchLogs = async () => {
+    setIsLoading(true);
     try {
+      // 1. Try consolidated audit_logs_view
+      const { data: viewData, error: viewError } = await supabase
+        .from('audit_logs_view')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!viewError && viewData) {
+        setLogs(viewData as AuditLogItem[]);
+        return;
+      }
+
+      // 2. Direct table fallback
       const { data, error } = await supabase
         .from('audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const mapped: AuditLogItem[] = data.map((d: any) => ({
           id: d.id,
           actor_user_id: d.actor_id,
@@ -139,8 +67,10 @@ export default function AuditLogsPage() {
         }));
         setLogs(mapped);
       }
-    } catch {
-      // Fallback
+    } catch (err: any) {
+      console.error('Failed to fetch audit logs:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -182,8 +112,8 @@ export default function AuditLogsPage() {
   const filteredLogs = logs.filter((log) => {
     const term = search.toLowerCase();
     const matchesSearch =
-      log.actor_name.toLowerCase().includes(term) ||
-      log.action.toLowerCase().includes(term) ||
+      (log.actor_name && log.actor_name.toLowerCase().includes(term)) ||
+      (log.action && log.action.toLowerCase().includes(term)) ||
       (log.entity_id && log.entity_id.toLowerCase().includes(term)) ||
       (log.reason && log.reason.toLowerCase().includes(term));
 
@@ -207,13 +137,22 @@ export default function AuditLogsPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleExportCSV}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-sm transition-colors"
-        >
-          <Download className="w-4 h-4 text-emerald-600" />
-          <span>Export Audit CSV</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={fetchLogs}
+            title="Refresh Audit Logs"
+            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-sm transition-colors"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Export Audit CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters Bar */}
@@ -232,7 +171,7 @@ export default function AuditLogsPage() {
         <select
           value={selectedEntity}
           onChange={(e) => setSelectedEntity(e.target.value)}
-          className="px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
+          className="px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white text-slate-700"
         >
           <option value="all">All Entity Types</option>
           <option value="mosques">Mosques</option>
@@ -240,7 +179,7 @@ export default function AuditLogsPage() {
           <option value="prayer_schedules">Prayer Schedules</option>
           <option value="user_points">User Points</option>
           <option value="user_roles">User Roles</option>
-          <option value="announcements">Announcements</option>
+          <option value="announcements">Mosque Events</option>
           <option value="support_cases">Support Cases</option>
         </select>
       </div>
@@ -260,42 +199,65 @@ export default function AuditLogsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
-                    {new Date(log.created_at).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center space-x-1.5 font-medium text-slate-900 text-xs">
-                      <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{log.actor_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-xs font-mono text-slate-600">
-                    <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
-                      {log.entity_type}
-                    </span>
-                    <span className="text-slate-400 block text-[11px]">{log.entity_id || '—'}</span>
-                  </td>
-                  <td className="px-4 py-4 text-xs text-slate-600 max-w-xs truncate">
-                    {log.reason || '—'}
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <button
-                      onClick={() => setActiveLog(log)}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                    >
-                      <Code2 className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Inspect</span>
-                    </button>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-12 text-center text-slate-500">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600 mx-auto mb-2" />
+                    <span className="text-sm font-medium">Loading compliance audit trail...</span>
                   </td>
                 </tr>
-              ))}
+              ) : filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-12 text-center">
+                    <ShieldAlert className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-slate-700">No audit records found</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {search || selectedEntity !== 'all'
+                        ? 'Try clearing search filters.'
+                        : 'Administrative actions across all consoles will be logged here automatically.'}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center space-x-1.5 font-medium text-slate-900 text-xs">
+                        <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{log.actor_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-xs font-mono text-slate-600">
+                      <span className="inline-flex items-center gap-1 font-semibold text-slate-800 capitalize">
+                        {log.entity_type.replace('_', ' ')}
+                      </span>
+                      <span className="text-slate-400 block text-[11px] truncate max-w-[140px]">
+                        {log.entity_id || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-xs text-slate-600 max-w-xs truncate">
+                      {log.reason || '—'}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        onClick={() => setActiveLog(log)}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                      >
+                        <Code2 className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Inspect</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -348,7 +310,7 @@ export default function AuditLogsPage() {
                   </pre>
                 </div>
                 <div>
-                  <div className="text-[11px] font-semibold text-emerald-600 mb-1">After State</div>
+                  <div className="text-[11px] font-semibold text-emerald-600 mb-1">After State / Changes</div>
                   <pre className="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto max-h-48">
                     {JSON.stringify(activeLog.after_state || activeLog.changes || {}, null, 2)}
                   </pre>
