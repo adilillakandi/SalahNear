@@ -117,14 +117,18 @@ export default function AttendanceReviewPage() {
           prayer_type,
           prayer_date,
           created_at,
+          submitted_at,
           status,
           points_awarded,
           is_mock_location,
           calculated_distance_m,
+          device_accuracy_m,
+          image_storage_path,
+          image_sha256,
           profiles:user_id (full_name, username),
           mosques:mosque_id (name)
         `)
-        .order('created_at', { ascending: false })
+        .order('submitted_at', { ascending: false })
         .limit(50);
 
       if (!error && data && data.length > 0) {
@@ -137,12 +141,13 @@ export default function AttendanceReviewPage() {
           mosque_name: d.mosques?.name || 'Local Mosque',
           prayer_type: d.prayer_type,
           prayer_date: d.prayer_date,
-          submitted_at: d.created_at,
+          submitted_at: d.submitted_at || d.created_at,
           status: d.status,
           points_awarded: d.points_awarded || 0,
-          device_accuracy_m: 14.0,
-          calculated_distance_m: d.calculated_distance_m || 35,
-          image_storage_path: null,
+          device_accuracy_m: d.device_accuracy_m ?? 10.0,
+          calculated_distance_m: d.calculated_distance_m ?? 0,
+          image_storage_path: d.image_storage_path || null,
+          image_sha256: d.image_sha256 || null,
           is_mock_location: d.is_mock_location || false,
         }));
         setItems(mapped);
@@ -164,46 +169,57 @@ export default function AttendanceReviewPage() {
     try {
       const pointsToAward = decision === 'verified' ? 5 : 0;
 
-      // 1. Update attendance table
-      await supabase
-        .from('attendance')
-        .update({
-          status: decision,
-          points_awarded: pointsToAward,
-        })
-        .eq('id', itemId);
-
-      // 2. Insert into attendance_verifications audit table
-      await supabase.from('attendance_verifications').insert({
-        attendance_id: itemId,
-        reviewer_id: 'admin_super_user',
-        decision: decision,
-        notes: reviewNote || `Manual admin decision: ${decision}`,
+      // 1. Attempt atomic stored procedure process_attendance_review
+      const { error: rpcError } = await supabase.rpc('process_attendance_review', {
+        p_attendance_id: itemId,
+        p_decision: decision,
+        p_notes: reviewNote || `Manual admin decision: ${decision}`,
+        p_points: pointsToAward,
       });
 
-      // 3. Insert points ledger if verified
-      if (decision === 'verified') {
-        await supabase.from('user_points').insert({
-          user_id: item.user_id,
-          points: 5,
-          activity_type: 'congregation_prayer',
-          reference_id: itemId,
-          notes: `Admin approved 5 points for ${item.prayer_type} at ${item.mosque_name}`,
+      // 2. Direct fallback if stored procedure is not yet deployed
+      if (rpcError) {
+        console.warn('RPC process_attendance_review not available, using direct queries:', rpcError);
+
+        await supabase
+          .from('attendance')
+          .update({
+            status: decision,
+            points_awarded: pointsToAward,
+            reviewed_at: new Date().toISOString(),
+            review_notes: reviewNote || `Manual admin decision: ${decision}`,
+          })
+          .eq('id', itemId);
+
+        await supabase.from('attendance_verifications').insert({
+          attendance_id: itemId,
+          reviewer_id: null,
+          decision: decision,
+          review_notes: reviewNote || `Manual admin decision: ${decision}`,
+        });
+
+        if (decision === 'verified') {
+          await supabase.from('user_points').insert({
+            user_id: item.user_id,
+            attendance_id: itemId,
+            points: 5,
+            activity_type: 'prayer_attendance',
+            reason: `Admin approved 5 points for ${item.prayer_type} at ${item.mosque_name}`,
+          });
+        }
+
+        await supabase.from('audit_logs').insert({
+          actor_name: 'Attendance Reviewer',
+          action: `ATTENDANCE_${decision.toUpperCase()}`,
+          target_table: 'attendance',
+          target_id: itemId,
+          changes: {
+            decision,
+            points_awarded: pointsToAward,
+            notes: reviewNote,
+          },
         });
       }
-
-      // 4. Audit log entry
-      await supabase.from('audit_logs').insert({
-        actor_name: 'Attendance Reviewer',
-        action: `ATTENDANCE_${decision.toUpperCase()}`,
-        target_table: 'attendance',
-        target_id: itemId,
-        changes: {
-          decision,
-          points_awarded: pointsToAward,
-          notes: reviewNote,
-        },
-      });
 
       // Update local state
       setItems((prev) =>
