@@ -42,153 +42,10 @@ const KERALA_DISTRICTS = [
   'Wayanad',
 ];
 
-const INITIAL_MOSQUES: Mosque[] = [
-  {
-    id: 'm1',
-    name: 'Mishkal Mosque',
-    alternate_name: 'Mishkal Palli',
-    name_ml: 'മിശ്കാൽ പള്ളി (കുറ്റിച്ചിറ)',
-    address: 'Kuttichira',
-    city_or_locality: 'Kuttichira, Kozhikode',
-    district: 'Kozhikode',
-    state: 'Kerala',
-    verification_status: 'verified',
-    attendance_radius_m: 80,
-    entrance_latitude: 11.2425,
-    entrance_longitude: 75.7765,
-    qr_checkin_enabled: true,
-    verification_notes: 'Verified via Kuttichira Mahal Committee records and on-site entrance inspection.',
-    is_active: true,
-    latitude: 11.2425,
-    longitude: 75.7765,
-    created_at: '2026-09-01T10:00:00Z',
-  },
-  {
-    id: 'm2',
-    name: 'Kallai Juma Masjid',
-    alternate_name: 'Kallai Palli',
-    name_ml: 'കല്ലായ് ജുമാ മസ്ജിദ്',
-    address: 'Kallai Road',
-    city_or_locality: 'Kallai, Kozhikode',
-    district: 'Kozhikode',
-    state: 'Kerala',
-    verification_status: 'verified',
-    attendance_radius_m: 70,
-    entrance_latitude: 11.2338,
-    entrance_longitude: 75.7951,
-    qr_checkin_enabled: true,
-    verification_notes: 'Standard roadside entrance geofence calibrated.',
-    is_active: true,
-    latitude: 11.2338,
-    longitude: 75.7951,
-    created_at: '2026-09-05T12:00:00Z',
-  },
-  {
-    id: 'm3',
-    name: 'Palayam Juma Masjid',
-    alternate_name: 'Palayam Palli',
-    name_ml: 'പാളയം ജുമാ മസ്ജിദ്',
-    address: 'Palayam',
-    city_or_locality: 'Palayam, Thiruvananthapuram',
-    district: 'Thiruvananthapuram',
-    state: 'Kerala',
-    verification_status: 'verified',
-    attendance_radius_m: 100,
-    entrance_latitude: 8.5028,
-    entrance_longitude: 76.9515,
-    qr_checkin_enabled: true,
-    verification_notes: 'City center landmark mosque with dual entrance geofence.',
-    is_active: true,
-    latitude: 8.5028,
-    longitude: 76.9515,
-    created_at: '2026-09-10T14:00:00Z',
-  },
-  {
-    id: 'm4',
-    name: 'Cheraman Juma Masjid',
-    alternate_name: 'First Mosque in India (Historic)',
-    name_ml: 'ചേരമാൻ ജുമാ മസ്ജിദ് (കൊടുങ്ങല്ലൂർ)',
-    address: 'Methala, Kodungallur',
-    city_or_locality: 'Kodungallur, Thrissur',
-    district: 'Thrissur',
-    state: 'Kerala',
-    verification_status: 'verified',
-    attendance_radius_m: 90,
-    entrance_latitude: 10.2155,
-    entrance_longitude: 76.1952,
-    qr_checkin_enabled: true,
-    verification_notes: 'Heritage status verified. Large premises radius applied.',
-    is_active: true,
-    latitude: 10.2155,
-    longitude: 76.1952,
-    created_at: '2026-09-12T08:00:00Z',
-  },
-  {
-    id: 'm5',
-    name: 'Malappuram Town Valiya Juma Masjid',
-    alternate_name: 'Town Palli',
-    name_ml: 'വലിയ ജുമാ മസ്ജിദ് മലപ്പുറം',
-    address: 'Down Hill',
-    city_or_locality: 'Malappuram Town',
-    district: 'Malappuram',
-    state: 'Kerala',
-    verification_status: 'pending',
-    attendance_radius_m: 75,
-    entrance_latitude: 11.0732,
-    entrance_longitude: 76.0740,
-    qr_checkin_enabled: true,
-    verification_notes: 'Imported from OSM Overpass staging pipeline; awaiting District Admin committee validation.',
-    is_active: true,
-    latitude: 11.0732,
-    longitude: 76.0740,
-    created_at: '2026-11-01T09:00:00Z',
-  },
-  {
-    id: 'm6',
-    name: 'Edappally Toll Juma Masjid',
-    alternate_name: 'Toll Mosque',
-    name_ml: 'ഇടപ്പള്ളി ടോൾ ജുമാ മസ്ജിദ്',
-    address: 'Toll Junction, Edappally',
-    city_or_locality: 'Kochi, Ernakulam',
-    district: 'Ernakulam',
-    state: 'Kerala',
-    verification_status: 'under_review',
-    attendance_radius_m: 70,
-    entrance_latitude: 10.0261,
-    entrance_longitude: 76.3082,
-    qr_checkin_enabled: true,
-    verification_notes: 'Under review for potential boundary overlap with adjacent madrasa property.',
-    is_active: true,
-    latitude: 10.0261,
-    longitude: 76.3082,
-    created_at: '2026-11-02T10:00:00Z',
-  },
-  {
-    id: 'm7',
-    name: 'Kottakkal Changuvetty Juma Masjid',
-    alternate_name: 'Changuvetty Palli',
-    name_ml: 'ചങ്കുവെട്ടി ജുമാ മസ്ജിദ്',
-    address: 'Changuvetty',
-    city_or_locality: 'Kottakkal, Malappuram',
-    district: 'Malappuram',
-    state: 'Kerala',
-    verification_status: 'needs_correction',
-    attendance_radius_m: 60,
-    entrance_latitude: 10.9985,
-    entrance_longitude: 75.9982,
-    qr_checkin_enabled: true,
-    verification_notes: 'Coordinates placed marker on bypass road instead of mosque entrance gate.',
-    is_active: true,
-    latitude: 10.9985,
-    longitude: 75.9982,
-    created_at: '2026-11-03T11:00:00Z',
-  },
-];
-
 export default function MosquesPage() {
   const { role, activeDistrict, activeMosqueId } = useAdminAuth();
-  const [mosques, setMosques] = useState<Mosque[]>(INITIAL_MOSQUES);
-  const [loading, setLoading] = useState(false);
+  const [mosques, setMosques] = useState<Mosque[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState(
     role === 'district_admin' && activeDistrict ? activeDistrict : 'All Districts'
@@ -213,6 +70,7 @@ export default function MosquesPage() {
   const [formRadius, setFormRadius] = useState('80');
   const [formNotes, setFormNotes] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -227,11 +85,14 @@ export default function MosquesPage() {
         .select('*')
         .order('name', { ascending: true });
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         setMosques(data as Mosque[]);
+      } else {
+        setMosques([]);
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error('Error fetching mosques:', err);
+      setMosques([]);
     } finally {
       setLoading(false);
     }
@@ -239,32 +100,48 @@ export default function MosquesPage() {
 
   const handleUpdateStatus = async (mosqueId: string, status: Mosque['verification_status']) => {
     try {
-      await supabase
-        .from('mosques')
-        .update({ verification_status: status })
-        .eq('id', mosqueId);
+      // 1. Attempt stored procedure update_mosque_pipeline_status
+      const { error: rpcErr } = await supabase.rpc('update_mosque_pipeline_status', {
+        p_mosque_id: mosqueId,
+        p_status: status,
+      });
+
+      // 2. Direct fallback if stored procedure is not yet deployed
+      if (rpcErr) {
+        const { error } = await supabase
+          .from('mosques')
+          .update({ verification_status: status, updated_at: new Date().toISOString() })
+          .eq('id', mosqueId);
+        if (error) throw error;
+      }
 
       // Audit log
-      await supabase.from('audit_logs').insert({
-        actor_name: role.toUpperCase(),
-        action: `MOSQUE_${status.toUpperCase()}`,
-        target_table: 'mosques',
-        target_id: mosqueId,
-        changes: { status },
-      });
+      try {
+        await supabase.from('audit_logs').insert({
+          actor_name: role.toUpperCase(),
+          action: `MOSQUE_${status.toUpperCase()}`,
+          target_table: 'mosques',
+          target_id: mosqueId,
+          changes: { status },
+        });
+      } catch {
+        // Ignore audit failure
+      }
 
       setMosques((prev) =>
         prev.map((m) => (m.id === mosqueId ? { ...m, verification_status: status } : m))
       );
       setFeedbackMsg({ type: 'success', text: `Mosque status successfully set to ${status}.` });
       setTimeout(() => setFeedbackMsg(null), 4000);
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Failed to update mosque status.' });
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', text: err?.message || 'Failed to update mosque status.' });
+      setTimeout(() => setFeedbackMsg(null), 4000);
     }
   };
 
   const handleSaveMosque = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     const lat = parseFloat(formLat);
     const lng = parseFloat(formLng);
     const radius = parseInt(formRadius, 10);
@@ -273,21 +150,42 @@ export default function MosquesPage() {
 
     if (showEditModal && activeMosque) {
       try {
-        await supabase
-          .from('mosques')
-          .update({
-            name: formName,
-            name_ml: formNameMl,
-            city_or_locality: formLocality,
-            district: formDistrict,
-            latitude: lat,
-            longitude: lng,
-            entrance_latitude: eLat,
-            entrance_longitude: eLng,
-            attendance_radius_m: radius,
-            verification_notes: formNotes,
-          })
-          .eq('id', activeMosque.id);
+        // 1. Try atomic stored procedure save_mosque_configuration
+        const { error: rpcErr } = await supabase.rpc('save_mosque_configuration', {
+          p_mosque_id: activeMosque.id,
+          p_name: formName,
+          p_name_ml: formNameMl || null,
+          p_city_or_locality: formLocality,
+          p_district: formDistrict,
+          p_latitude: lat,
+          p_longitude: lng,
+          p_entrance_latitude: eLat,
+          p_entrance_longitude: eLng,
+          p_attendance_radius_m: radius,
+          p_verification_notes: formNotes,
+        });
+
+        // 2. Direct update fallback
+        if (rpcErr) {
+          const { error: updateErr } = await supabase
+            .from('mosques')
+            .update({
+              name: formName,
+              name_ml: formNameMl || null,
+              city_or_locality: formLocality,
+              district: formDistrict,
+              latitude: lat,
+              longitude: lng,
+              entrance_latitude: eLat,
+              entrance_longitude: eLng,
+              attendance_radius_m: radius,
+              verification_notes: formNotes,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', activeMosque.id);
+
+          if (updateErr) throw updateErr;
+        }
 
         setMosques((prev) =>
           prev.map((m) =>
@@ -311,67 +209,114 @@ export default function MosquesPage() {
         setShowEditModal(false);
         setFeedbackMsg({ type: 'success', text: 'Mosque coordinates, entrance, and geofence updated.' });
         setTimeout(() => setFeedbackMsg(null), 4000);
-      } catch {
-        setFeedbackMsg({ type: 'error', text: 'Failed to update mosque.' });
+      } catch (err: any) {
+        setFeedbackMsg({ type: 'error', text: err?.message || 'Failed to update mosque.' });
+        setTimeout(() => setFeedbackMsg(null), 4000);
+      } finally {
+        setSubmitting(false);
       }
     } else if (showAddModal) {
-      const newMosque: Mosque = {
-        id: `m_${Date.now()}`,
-        name: formName,
-        name_ml: formNameMl,
-        city_or_locality: formLocality,
-        district: formDistrict,
-        state: 'Kerala',
-        verification_status: 'verified',
-        attendance_radius_m: radius,
-        entrance_latitude: eLat,
-        entrance_longitude: eLng,
-        qr_checkin_enabled: true,
-        verification_notes: formNotes || 'Manually registered and verified by District Admin.',
-        is_active: true,
-        latitude: lat,
-        longitude: lng,
-        created_at: new Date().toISOString(),
-      };
-
       try {
-        await supabase.from('mosques').insert(newMosque);
-      } catch {
-        // Fallback local
-      }
+        // 1. Try atomic stored procedure save_mosque_configuration
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('save_mosque_configuration', {
+          p_name: formName,
+          p_name_ml: formNameMl || null,
+          p_city_or_locality: formLocality,
+          p_district: formDistrict,
+          p_latitude: lat,
+          p_longitude: lng,
+          p_entrance_latitude: eLat,
+          p_entrance_longitude: eLng,
+          p_attendance_radius_m: radius,
+          p_verification_notes: formNotes || 'Manually registered and verified by Administrator.',
+          p_verification_status: 'verified',
+        });
 
-      setMosques((prev) => [newMosque, ...prev]);
-      setShowAddModal(false);
-      setFeedbackMsg({ type: 'success', text: 'New mosque registered and calibrated.' });
-      setTimeout(() => setFeedbackMsg(null), 4000);
+        if (!rpcErr && rpcData?.mosque_id) {
+          await fetchMosques();
+        } else {
+          // 2. Direct insert fallback using valid Supabase UUID generation
+          const { data: inserted, error: insertErr } = await supabase
+            .from('mosques')
+            .insert({
+              name: formName,
+              name_ml: formNameMl || null,
+              city_or_locality: formLocality,
+              district: formDistrict,
+              state: 'Kerala',
+              verification_status: 'verified',
+              attendance_radius_m: radius,
+              entrance_latitude: eLat,
+              entrance_longitude: eLng,
+              qr_checkin_enabled: true,
+              verification_notes: formNotes || 'Manually registered and verified by Administrator.',
+              is_active: true,
+              latitude: lat,
+              longitude: lng,
+            })
+            .select()
+            .single();
+
+          if (insertErr) throw insertErr;
+          if (inserted) {
+            setMosques((prev) => [inserted as Mosque, ...prev]);
+          }
+        }
+
+        setShowAddModal(false);
+        setFeedbackMsg({ type: 'success', text: `"${formName}" registered and calibrated.` });
+        setTimeout(() => setFeedbackMsg(null), 4000);
+      } catch (err: any) {
+        setFeedbackMsg({ type: 'error', text: err?.message || 'Failed to register mosque.' });
+        setTimeout(() => setFeedbackMsg(null), 4000);
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
   const handleAssignAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeMosque || !adminEmail) return;
+    setSubmitting(true);
 
     try {
-      await supabase.from('mosque_admins').insert({
-        mosque_id: activeMosque.id,
-        user_id: `user_${Date.now()}`,
-        assigned_by: 'Super Admin',
+      // 1. Attempt stored procedure assign_mosque_admin_by_email
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('assign_mosque_admin_by_email', {
+        p_mosque_id: activeMosque.id,
+        p_email: adminEmail,
       });
 
-      await supabase.from('audit_logs').insert({
-        actor_name: role.toUpperCase(),
-        action: 'ASSIGN_MOSQUE_ADMIN',
-        target_table: 'mosque_admins',
-        target_id: activeMosque.id,
-        changes: { email: adminEmail, mosque: activeMosque.name },
-      });
+      if (rpcErr) {
+        // Fallback: check profile by username/id
+        const { data: prof, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .or(`username.eq.${adminEmail},id.eq.${adminEmail}`)
+          .maybeSingle();
+
+        if (profErr || !prof) {
+          throw new Error(
+            rpcErr.message ||
+              `No user account found matching "${adminEmail}". Please provision an account on the Users page first.`
+          );
+        }
+
+        await supabase.from('mosque_admins').insert({
+          mosque_id: activeMosque.id,
+          user_id: prof.id,
+        });
+      }
 
       setShowAdminModal(false);
       setAdminEmail('');
       setFeedbackMsg({ type: 'success', text: `Assigned admin ${adminEmail} to ${activeMosque.name}.` });
       setTimeout(() => setFeedbackMsg(null), 4000);
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Could not assign admin.' });
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', text: err?.message || 'Could not assign admin.' });
+      setTimeout(() => setFeedbackMsg(null), 4000);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -444,15 +389,15 @@ export default function MosquesPage() {
         >
           <div className="flex items-center space-x-2">
             {feedbackMsg.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             ) : (
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
             )}
             <span className="font-medium">{feedbackMsg.text}</span>
           </div>
           <button
             onClick={() => setFeedbackMsg(null)}
-            className="text-xs uppercase font-bold text-slate-500 hover:text-slate-800"
+            className="text-xs uppercase font-bold text-slate-500 hover:text-slate-800 ml-4"
           >
             Dismiss
           </button>
@@ -466,20 +411,30 @@ export default function MosquesPage() {
             <Building2 className="w-7 h-7 text-emerald-600" />
             Mosque Directory & OSM Staging Pipeline
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 mt-0.5">
             Verify OpenStreetMap candidates, calibrate entrance coordinates, set geofence radius, and assign Mosque Admins.
           </p>
         </div>
 
-        {role !== 'mosque_admin' && (
+        <div className="flex items-center space-x-2">
           <button
-            onClick={openCreateModal}
-            className="inline-flex items-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-sm transition-colors gap-2"
+            onClick={fetchMosques}
+            disabled={loading}
+            title="Refresh Directory"
+            className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 shadow-sm"
           >
-            <Plus className="w-4 h-4" />
-            Register New Mosque
+            <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
           </button>
-        )}
+          {role !== 'mosque_admin' && (
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-sm transition-colors gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Register New Mosque
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters Bar */}
@@ -554,11 +509,37 @@ export default function MosquesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredMosques.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                    <div className="flex items-center justify-center space-x-2">
+                      <RotateCw className="w-5 h-5 text-emerald-600 animate-spin" />
+                      <span className="text-sm font-medium text-slate-500">Loading mosques directory...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredMosques.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                     <Building2 className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-                    No mosques match your search or filter criteria.
+                    <div className="font-semibold text-slate-700">No mosques found</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {mosques.length === 0
+                        ? 'No mosques have been registered in the database yet. Click "Register New Mosque" to add one.'
+                        : 'No mosques match your search or filter criteria.'}
+                    </div>
+                    {mosques.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setSearch('');
+                          setSelectedDistrict('All Districts');
+                          setSelectedStatus('all');
+                        }}
+                        className="mt-3 text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -830,15 +811,17 @@ export default function MosquesPage() {
                     setShowAddModal(false);
                     setShowEditModal(false);
                   }}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm transition-colors"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
                 >
-                  Save Mosque Configuration
+                  {submitting ? 'Saving...' : 'Save Mosque Configuration'}
                 </button>
               </div>
             </form>
@@ -882,15 +865,17 @@ export default function MosquesPage() {
                 <button
                   type="button"
                   onClick={() => setShowAdminModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm transition-colors"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
                 >
-                  Confirm Assignment
+                  {submitting ? 'Assigning...' : 'Confirm Assignment'}
                 </button>
               </div>
             </form>
