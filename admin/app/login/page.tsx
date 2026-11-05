@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAdminAuth } from '@/lib/auth-context';
@@ -26,12 +26,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(true);
+
+  // Clear any default values or browser-injected autofill on mount and tab switch
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+    setIsReadOnly(true);
+  }, [activeTab]);
 
   const handleTabChange = (tab: 'super_admin' | 'mosque_admin') => {
     setActiveTab(tab);
     setEmail('');
     setPassword('');
     setErrorMsg(null);
+    setIsReadOnly(true);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -117,7 +126,24 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSignIn}>
+          <form className="space-y-4" onSubmit={handleSignIn} autoComplete="off">
+            {/* Hidden decoy inputs positioned off-screen to trap browser autofill heuristics */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '-9999px',
+                top: '-9999px',
+                opacity: 0,
+                width: 0,
+                height: 0,
+                overflow: 'hidden',
+              }}
+              aria-hidden="true"
+            >
+              <input type="text" name="fake_username_trap" tabIndex={-1} autoComplete="off" />
+              <input type="password" name="fake_password_trap" tabIndex={-1} autoComplete="new-password" />
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">
                 Authorized Email Address
@@ -127,12 +153,21 @@ export default function LoginPage() {
                   <Mail className="h-4 w-4 text-slate-500" />
                 </div>
                 <input
+                  id="admin_email_input"
+                  name="admin_login_auth_user"
                   type="email"
                   required
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  readOnly={isReadOnly}
+                  onFocus={() => setIsReadOnly(false)}
+                  onClick={() => setIsReadOnly(false)}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="Enter your authorized email"
+                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder=""
                 />
               </div>
             </div>
@@ -152,12 +187,18 @@ export default function LoginPage() {
                   <Lock className="h-4 w-4 text-slate-500" />
                 </div>
                 <input
+                  id="admin_password_input"
+                  name="admin_login_auth_pass"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="new-password"
+                  readOnly={isReadOnly}
+                  onFocus={() => setIsReadOnly(false)}
+                  onClick={() => setIsReadOnly(false)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="Enter your password"
+                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder=""
                 />
                 <button
                   type="button"
