@@ -13,31 +13,25 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  CheckCircle2,
   AlertCircle,
-  Sparkles,
 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, switchRole } = useAdminAuth();
+  const { signIn } = useAdminAuth();
 
   const [activeTab, setActiveTab] = useState<'super_admin' | 'mosque_admin'>('super_admin');
-  const [email, setEmail] = useState('adhilktillakandi@gmail.com');
-  const [password, setPassword] = useState('adilSalaNear66');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleTabChange = (tab: 'super_admin' | 'mosque_admin') => {
     setActiveTab(tab);
-    if (tab === 'super_admin') {
-      setEmail('adhilktillakandi@gmail.com');
-      setPassword('adilSalaNear66');
-    } else {
-      setEmail('');
-      setPassword('');
-    }
+    setEmail('');
+    setPassword('');
+    setErrorMsg(null);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -57,11 +51,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const quickDemoLogin = (role: AdminRole, mosqueId?: string, district?: string) => {
-    switchRole(role, district, mosqueId);
-    router.push('/');
   };
 
   return (
@@ -143,7 +132,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="admin@salahnear.org"
+                  placeholder="Enter your authorized email"
                 />
               </div>
             </div>
@@ -168,7 +157,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="••••••••••••"
+                  placeholder="Enter your password"
                 />
                 <button
                   type="button"
@@ -197,30 +186,6 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
-
-          {/* Quick Evaluator Role Switcher */}
-          <div className="mt-8 pt-6 border-t border-slate-800 text-center">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              1-Click Demo Evaluation Profiles
-            </p>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <button
-                onClick={() => quickDemoLogin('super_admin')}
-                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
-              >
-                <div className="font-semibold text-emerald-400">Adil KT (Super Admin)</div>
-                <div className="text-[10px] text-slate-400 mt-0.5 font-mono">adhilktillakandi@gmail.com</div>
-              </button>
-              <button
-                onClick={() => quickDemoLogin('mosque_admin', 'm1')}
-                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-left"
-              >
-                <div className="font-semibold text-amber-400">Mosque Admin</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Assigned Mosque Venue</div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-500">
