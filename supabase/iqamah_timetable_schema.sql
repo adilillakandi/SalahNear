@@ -467,3 +467,4 @@ FROM public.prayer_schedule_history
 WHERE mosque_id = '<MOSQUE_UUID>'
 ORDER BY version DESC;
 */
+
