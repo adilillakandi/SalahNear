@@ -28,44 +28,70 @@ export default function AuditLogsPage() {
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      // 1. Try consolidated audit_logs_view
-      const { data: viewData, error: viewError } = await supabase
-        .from('audit_logs_view')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (!viewError && viewData) {
-        setLogs(viewData as AuditLogItem[]);
-        return;
-      }
-
-      // 2. Direct table fallback
+      // 1. Direct query on public.audit_logs (guaranteed to match the Dashboard)
       const { data, error } = await supabase
         .from('audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         const mapped: AuditLogItem[] = data.map((d: any) => ({
           id: d.id,
-          actor_user_id: d.actor_id,
+          actor_user_id: d.actor_id || d.actor_user_id,
           actor_name: d.actor_name || 'Admin Officer',
           action: d.action,
           entity_type: d.entity_type || d.target_table || 'system',
           entity_id: d.entity_id || d.target_id || '',
-          target_table: d.target_table || d.entity_type,
-          target_id: d.target_id || d.entity_id,
+          target_table: d.target_table || d.entity_type || 'system',
+          target_id: d.target_id || d.entity_id || '',
           before_state: d.before_state,
-          after_state: d.after_state,
-          changes: d.changes,
+          after_state: d.after_state || d.changes,
+          changes: d.changes || d.after_state,
           reason: d.reason || 'Administrative update',
           ip_address: d.ip_address,
           user_agent: d.user_agent,
           created_at: d.created_at,
         }));
         setLogs(mapped);
+        return;
+      }
+
+      // 2. Direct fallback using minimal safe columns that succeeded on Dashboard Overview
+      const { data: minimalData, error: minError } = await supabase
+        .from('audit_logs')
+        .select('id, action, actor_name, target_table, target_id, changes, reason, ip_address, created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!minError && minimalData && minimalData.length > 0) {
+        const mapped: AuditLogItem[] = minimalData.map((d: any) => ({
+          id: d.id,
+          actor_user_id: '',
+          actor_name: d.actor_name || 'Admin Officer',
+          action: d.action,
+          entity_type: d.target_table || 'system',
+          entity_id: d.target_id || '',
+          target_table: d.target_table || 'system',
+          target_id: d.target_id || '',
+          changes: d.changes,
+          reason: d.reason || 'Administrative update',
+          ip_address: d.ip_address,
+          created_at: d.created_at,
+        }));
+        setLogs(mapped);
+        return;
+      }
+
+      // 3. Consolidated view fallback if deployed
+      const { data: viewData, error: viewError } = await supabase
+        .from('audit_logs_view')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!viewError && viewData && viewData.length > 0) {
+        setLogs(viewData as AuditLogItem[]);
       }
     } catch (err: any) {
       console.error('Failed to fetch audit logs:', err);
@@ -110,15 +136,19 @@ export default function AuditLogsPage() {
   };
 
   const filteredLogs = logs.filter((log) => {
-    const term = search.toLowerCase();
+    const term = search.toLowerCase().trim();
     const matchesSearch =
+      !term ||
       (log.actor_name && log.actor_name.toLowerCase().includes(term)) ||
       (log.action && log.action.toLowerCase().includes(term)) ||
       (log.entity_id && log.entity_id.toLowerCase().includes(term)) ||
-      (log.reason && log.reason.toLowerCase().includes(term));
+      (log.reason && log.reason.toLowerCase().includes(term)) ||
+      (log.entity_type && log.entity_type.toLowerCase().includes(term));
 
     const matchesEntity =
-      selectedEntity === 'all' || log.entity_type === selectedEntity;
+      selectedEntity === 'all' ||
+      log.entity_type === selectedEntity ||
+      log.target_table === selectedEntity;
 
     return matchesSearch && matchesEntity;
   });
