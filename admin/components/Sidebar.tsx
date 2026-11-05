@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { useAdminAuth } from '@/lib/auth-context';
 import { AdminRole } from '@/lib/types';
 import {
@@ -51,7 +52,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
     name: 'Attendance Review',
     href: '/attendance',
     icon: CheckCircle2,
-    badge: '4',
     allowedRoles: ['super_admin'],
   },
   {
@@ -82,7 +82,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
     name: 'Support & Disputes',
     href: '/support',
     icon: LifeBuoy,
-    badge: '2',
     allowedRoles: ['super_admin'],
   },
   {
@@ -96,6 +95,56 @@ const ALL_NAV_ITEMS: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { role, adminUser } = useAdminAuth();
+
+  const [counts, setCounts] = useState<{
+    attendance: number | null;
+    support: number | null;
+  }>({
+    attendance: null,
+    support: null,
+  });
+
+  useEffect(() => {
+    fetchCounts();
+
+    // Realtime listener for live updates across consoles
+    const channel = supabase
+      .channel('sidebar-realtime-badge-counts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        fetchCounts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_cases' }, () => {
+        fetchCounts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [pathname, role]);
+
+  const fetchCounts = async () => {
+    try {
+      const [{ count: attCount }, { count: supCount }] = await Promise.all([
+        supabase
+          .from('attendance')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'flagged']),
+        supabase
+          .from('support_cases')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['open', 'in_progress', 'waiting_for_user']),
+      ]);
+
+      setCounts({
+        attendance: attCount ?? 0,
+        support: supCount ?? 0,
+      });
+    } catch (err) {
+      console.error('Failed to fetch sidebar counts:', err);
+      setCounts({ attendance: 0, support: 0 });
+    }
+  };
 
   const cleanName = (adminUser?.full_name || 'Dr. Abdul Rahman Koya')
     .replace(/\s*\([^)]*\)/g, '')
@@ -146,6 +195,15 @@ export default function Sidebar() {
         {permittedItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
+
+          // Determine exact live badge count from Supabase
+          const exactCount =
+            item.href === '/attendance'
+              ? counts.attendance
+              : item.href === '/support'
+              ? counts.support
+              : null;
+
           return (
             <Link
               key={item.href}
@@ -160,9 +218,15 @@ export default function Sidebar() {
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 <span className="truncate">{item.name}</span>
               </div>
-              {item.badge && (
-                <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {item.badge}
+              {exactCount !== null && (
+                <span
+                  className={`px-2 py-0.5 text-[11px] font-bold rounded-full transition-colors ${
+                    exactCount > 0
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700/60 font-mono text-[10px]'
+                  }`}
+                >
+                  {exactCount}
                 </span>
               )}
             </Link>
