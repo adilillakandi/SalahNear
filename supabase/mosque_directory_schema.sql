@@ -617,3 +617,4 @@ grant execute on function public.assign_mosque_admin_by_email to authenticated;
 -- WHERE (name ILIKE '%mishkal%' OR name_ml ILIKE '%മിശ്കാൽ%' OR city_or_locality ILIKE '%mishkal%')
 --   AND (district = 'Kozhikode' OR 'All Districts' = 'All Districts')
 -- ORDER BY name ASC;
+
