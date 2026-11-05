@@ -18,82 +18,12 @@ import {
   User,
   Building2,
   FileText,
+  RefreshCw,
 } from 'lucide-react';
 
-const INITIAL_REVIEW_ITEMS: AttendanceReviewItem[] = [
-  {
-    id: 'att_rev_1',
-    user_id: 'u_101',
-    user_name: 'Fahad Rahiman',
-    user_username: 'fahad_calicut',
-    mosque_id: 'm1',
-    mosque_name: 'Mishkal Mosque, Kuttichira',
-    prayer_type: 'fajr',
-    prayer_date: '2026-11-04',
-    submitted_at: '2026-11-04T05:22:15+05:30',
-    status: 'pending',
-    points_awarded: 0,
-    device_accuracy_m: 8.4,
-    calculated_distance_m: 42,
-    image_storage_path: 'evidence/fahad_fajr_evidence.jpg',
-    is_mock_location: false,
-  },
-  {
-    id: 'att_rev_2',
-    user_id: 'u_102',
-    user_name: 'Salman Faris',
-    user_username: 'salman_mlp',
-    mosque_id: 'm5',
-    mosque_name: 'Town Valiya Juma Masjid, Malappuram',
-    prayer_type: 'fajr',
-    prayer_date: '2026-11-04',
-    submitted_at: '2026-11-04T05:28:40+05:30',
-    status: 'flagged',
-    points_awarded: 0,
-    device_accuracy_m: 65.0,
-    calculated_distance_m: 145,
-    image_storage_path: 'evidence/salman_fajr_evidence.jpg',
-    is_mock_location: true,
-  },
-  {
-    id: 'att_rev_3',
-    user_id: 'u_103',
-    user_name: 'Aisha Siddiqa',
-    user_username: 'aisha_ekm',
-    mosque_id: 'm6',
-    mosque_name: 'Edappally Toll Juma Masjid, Kochi',
-    prayer_type: 'dhuhr',
-    prayer_date: '2026-11-03',
-    submitted_at: '2026-11-03T12:45:10+05:30',
-    status: 'verified',
-    points_awarded: 5,
-    device_accuracy_m: 12.1,
-    calculated_distance_m: 28,
-    image_storage_path: 'evidence/aisha_dhuhr_evidence.jpg',
-    is_mock_location: false,
-  },
-  {
-    id: 'att_rev_4',
-    user_id: 'u_104',
-    user_name: 'Zameer KP',
-    user_username: 'zameer_knr',
-    mosque_id: 'm2',
-    mosque_name: 'Kallai Juma Masjid, Kozhikode',
-    prayer_type: 'isha',
-    prayer_date: '2026-11-03',
-    submitted_at: '2026-11-03T20:12:05+05:30',
-    status: 'pending',
-    points_awarded: 0,
-    device_accuracy_m: 22.0,
-    calculated_distance_m: 68,
-    image_storage_path: 'evidence/zameer_isha_evidence.jpg',
-    is_mock_location: false,
-  },
-];
-
 export default function AttendanceReviewPage() {
-  const [items, setItems] = useState<AttendanceReviewItem[]>(INITIAL_REVIEW_ITEMS);
-  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<AttendanceReviewItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPrayer, setFilterPrayer] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -129,9 +59,15 @@ export default function AttendanceReviewPage() {
           mosques:mosque_id (name)
         `)
         .order('submitted_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
-      if (!error && data && data.length > 0) {
+      if (error) {
+        console.error('Error fetching attendance queue:', error);
+        setItems([]);
+        return;
+      }
+
+      if (data && data.length > 0) {
         const mapped: AttendanceReviewItem[] = data.map((d: any) => ({
           id: d.id,
           user_id: d.user_id,
@@ -151,9 +87,12 @@ export default function AttendanceReviewPage() {
           is_mock_location: d.is_mock_location || false,
         }));
         setItems(mapped);
+      } else {
+        setItems([]);
       }
-    } catch {
-      // Use initial state
+    } catch (err) {
+      console.error('Error fetching attendance queue:', err);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -272,7 +211,7 @@ export default function AttendanceReviewPage() {
           }`}
         >
           <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <span className="font-medium">{notification.text}</span>
           </div>
           <button
@@ -291,13 +230,13 @@ export default function AttendanceReviewPage() {
             <ShieldAlert className="w-7 h-7 text-emerald-600" />
             Attendance Review & Anti-Fraud Queue
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 mt-0.5">
             Inspect camera proofs, device GPS accuracy telemetry, and mock location signals for congregational verifications.
           </p>
         </div>
 
-        {/* High Risk Counter Pill */}
-        <div className="flex items-center space-x-3">
+        {/* Counter Pills and Refresh */}
+        <div className="flex items-center space-x-2.5">
           <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-semibold flex items-center gap-1.5">
             <AlertTriangle className="w-4 h-4 text-amber-600" />
             <span>{flaggedCount} Flagged Submissions</span>
@@ -306,6 +245,14 @@ export default function AttendanceReviewPage() {
             <Clock className="w-4 h-4 text-blue-600" />
             <span>{pendingCount} Awaiting Review</span>
           </div>
+          <button
+            onClick={fetchReviewQueue}
+            disabled={loading}
+            title="Refresh Queue"
+            className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 shadow-sm"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -377,11 +324,21 @@ export default function AttendanceReviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredItems.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                    <div className="flex items-center justify-center space-x-2">
+                      <RefreshCw className="w-5 h-5 text-emerald-600 animate-spin" />
+                      <span className="text-sm font-medium text-slate-500">Loading attendance queue...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                     <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-300" />
-                    Review queue is clear! No matching attendance items.
+                    <div className="font-semibold text-slate-700">Review queue is clear!</div>
+                    <div className="text-xs text-slate-400 mt-0.5">No matching attendance items found.</div>
                   </td>
                 </tr>
               ) : (
@@ -548,23 +505,29 @@ export default function AttendanceReviewPage() {
               </div>
             </div>
 
-            {/* Evidence Image Simulator */}
+            {/* Evidence Image Container */}
             <div className="p-4 bg-slate-900 rounded-xl text-slate-200 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center space-x-1.5 font-medium">
                   <Camera className="w-4 h-4 text-emerald-400" />
                   <span>Mosque Camera Evidence Photo</span>
                 </div>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">
-                  SHA-256 Validated
-                </span>
+                {activeItem.image_sha256 ? (
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">
+                    SHA-256 Validated
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Direct Check-in
+                  </span>
+                )}
               </div>
               <div className="h-32 bg-slate-800/80 rounded-lg flex items-center justify-center border border-slate-700/60 text-slate-400 text-xs">
                 <div className="text-center space-y-1">
                   <Camera className="w-6 h-6 mx-auto text-slate-500" />
                   <p>In-venue photographic verification captured via device camera.</p>
                   <p className="text-[10px] text-slate-500 font-mono">
-                    Storage Ref: {activeItem.image_storage_path || 'evidence/compressed_img_e489c.jpg'}
+                    Storage Ref: {activeItem.image_storage_path || 'No camera proof attached'}
                   </p>
                 </div>
               </div>
@@ -618,4 +581,3 @@ export default function AttendanceReviewPage() {
     </div>
   );
 }
-
