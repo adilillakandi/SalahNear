@@ -9,8 +9,10 @@ export interface AdminUser {
   role: AdminRole;
   state?: string;
   district?: string;
-  assigned_mosques?: string[]; // Mosque IDs
+  assigned_mosques?: string[]; // Mosque IDs or Names
   is_active: boolean;
+  invitation_status?: 'pending' | 'accepted' | 'expired' | 'revoked' | string;
+  invitation_token?: string;
   created_at: string;
   last_sign_in_at?: string;
 }

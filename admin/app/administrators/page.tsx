@@ -91,8 +91,12 @@ export default function AdministratorsPage() {
     pass: string;
     role: string;
     scope: string;
+    inviteUrl?: string;
+    emailSent?: boolean;
+    emailMessage?: string;
   } | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
+  const [hasCopiedLink, setHasCopiedLink] = useState(false);
 
   useEffect(() => {
     fetchAdmins();
@@ -103,11 +107,13 @@ export default function AdministratorsPage() {
   const fetchAdmins = async () => {
     setIsLoading(true);
     try {
+      let mapped: AdminUser[] = [];
+
       // 1. Try atomic get_admin_directory procedure first
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_admin_directory');
 
       if (!rpcError && rpcData && Array.isArray(rpcData)) {
-        const mapped: AdminUser[] = rpcData.map((d: any) => ({
+        mapped = rpcData.map((d: any) => ({
           id: d.id,
           email: d.email || 'admin@salahnear.org',
           full_name: d.full_name || 'Admin Officer',
@@ -116,55 +122,92 @@ export default function AdministratorsPage() {
           district: d.district || undefined,
           assigned_mosques: d.assigned_mosque_name ? [d.assigned_mosque_name] : undefined,
           is_active: d.is_active ?? true,
+          invitation_status: d.invitation_status || (d.is_active ? 'accepted' : 'pending'),
+          invitation_token: d.invitation_token || undefined,
           created_at: d.created_at,
           last_sign_in_at: d.last_sign_in_at || undefined,
         }));
-        setAdmins(mapped);
-        return;
+      } else {
+        // 2. Direct query fallback
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select(`
+            id,
+            user_id,
+            role,
+            district,
+            state,
+            is_active,
+            created_at,
+            profiles:user_id (
+              full_name,
+              email
+            ),
+            mosque_admins:user_id (
+              mosques:mosque_id (name)
+            )
+          `)
+          .neq('role', 'user')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          mapped = data.map((d: any) => {
+            const profile = Array.isArray(d.profiles) ? d.profiles[0] : d.profiles;
+            const mosqueAdmin = Array.isArray(d.mosque_admins) ? d.mosque_admins[0] : d.mosque_admins;
+            const mosqueName = mosqueAdmin?.mosques?.name;
+
+            return {
+              id: d.id,
+              email: profile?.email || `${d.role}_${d.user_id?.slice(0, 6)}@salahnear.org`,
+              full_name: profile?.full_name || 'Admin Officer',
+              role: d.role as AdminRole,
+              state: d.state || 'Kerala',
+              district: d.district || undefined,
+              assigned_mosques: mosqueName ? [mosqueName] : undefined,
+              is_active: d.is_active ?? true,
+              created_at: d.created_at,
+            };
+          });
+        }
       }
 
-      // 2. Direct query fallback
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select(`
-          id,
-          user_id,
-          role,
-          district,
-          state,
-          is_active,
-          created_at,
-          profiles:user_id (
-            full_name,
-            email
-          ),
-          mosque_admins:user_id (
-            mosques:mosque_id (name)
-          )
-        `)
-        .neq('role', 'user')
-        .order('created_at', { ascending: false });
+      // Also fetch pending invitations to merge into directory
+      try {
+        const { data: invData } = await supabase
+          .from('admin_invitations')
+          .select('id, email, full_name, role, status, token, created_at, mosques:mosque_id(name)')
+          .eq('status', 'pending');
 
-      if (!error && data) {
-        const mapped: AdminUser[] = data.map((d: any) => {
-          const profile = Array.isArray(d.profiles) ? d.profiles[0] : d.profiles;
-          const mosqueAdmin = Array.isArray(d.mosque_admins) ? d.mosque_admins[0] : d.mosque_admins;
-          const mosqueName = mosqueAdmin?.mosques?.name;
-
-          return {
-            id: d.id,
-            email: profile?.email || `${d.role}_${d.user_id?.slice(0, 6)}@salahnear.org`,
-            full_name: profile?.full_name || 'Admin Officer',
-            role: d.role as AdminRole,
-            state: d.state || 'Kerala',
-            district: d.district || undefined,
-            assigned_mosques: mosqueName ? [mosqueName] : undefined,
-            is_active: d.is_active ?? true,
-            created_at: d.created_at,
-          };
-        });
-        setAdmins(mapped);
+        if (invData && invData.length > 0) {
+          const existingEmails = new Set(mapped.map((m) => m.email.toLowerCase()));
+          for (const inv of invData) {
+            if (!existingEmails.has(inv.email.toLowerCase())) {
+              mapped.push({
+                id: inv.id,
+                email: inv.email,
+                full_name: inv.full_name,
+                role: inv.role as AdminRole,
+                state: 'Kerala',
+                assigned_mosques: (inv.mosques as any)?.name ? [(inv.mosques as any).name] : undefined,
+                is_active: false,
+                invitation_status: 'pending',
+                invitation_token: inv.token,
+                created_at: inv.created_at,
+              });
+            } else {
+              const existing = mapped.find((m) => m.email.toLowerCase() === inv.email.toLowerCase());
+              if (existing && !existing.is_active) {
+                existing.invitation_status = 'pending';
+                existing.invitation_token = inv.token;
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore table read if not created yet
       }
+
+      setAdmins(mapped);
     } catch (err: any) {
       console.error('Failed to load administrators:', err);
     } finally {
@@ -320,37 +363,29 @@ export default function AdministratorsPage() {
     }
   };
 
-  // Provision New Administrator Form Submission
+  // Provision New Administrator Form Submission & Send Invitation Email
   const handleProvisionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteName || !inviteEmail || !invitePassword) return;
 
     setIsSubmitting(true);
     try {
-      // Call atomic provision_administrator procedure
-      const { data: rpcData, error: rpcError } = await supabase.rpc('provision_administrator', {
-        p_email: inviteEmail.trim(),
-        p_password: invitePassword,
-        p_full_name: inviteName.trim(),
-        p_role: inviteRole,
-        p_district: null,
-        p_mosque_id: inviteRole === 'mosque_admin' ? selectedMosqueId : null,
+      // 1. Call API route to provision invitation and send invitation email
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          fullName: inviteName.trim(),
+          role: inviteRole,
+          password: invitePassword,
+          mosqueId: inviteRole === 'mosque_admin' ? selectedMosqueId : null,
+        }),
       });
 
-      if (rpcError) {
-        // Fallback to create_admin_account
-        const { error: fallbackError } = await supabase.rpc('create_admin_account', {
-          p_email: inviteEmail.trim(),
-          p_password: invitePassword,
-          p_full_name: inviteName.trim(),
-          p_role: inviteRole,
-          p_district: null,
-          p_mosque_id: inviteRole === 'mosque_admin' ? selectedMosqueId : null,
-        });
-
-        if (fallbackError) {
-          throw new Error(fallbackError.message || rpcError.message);
-        }
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to provision administrator and send invitation.');
       }
 
       // Compute display scope
@@ -359,13 +394,16 @@ export default function AdministratorsPage() {
           ? mosques.find((m) => m.id === selectedMosqueId)?.name || 'Assigned Mosque Venue'
           : 'Statewide (All Kerala)';
 
-      // Present credentials modal for Super Admin handoff
+      // Present credentials & invitation modal for Super Admin handoff
       setCreatedCredentials({
         name: inviteName,
         email: inviteEmail,
         pass: invitePassword,
         role: inviteRole,
         scope: displayScope,
+        inviteUrl: data.inviteUrl,
+        emailSent: data.emailSent,
+        emailMessage: data.emailMessage,
       });
 
       setShowInviteModal(false);
@@ -375,9 +413,9 @@ export default function AdministratorsPage() {
 
       setFeedback({
         type: 'success',
-        text: `Administrator account provisioned for ${inviteName}. Credentials ready to share.`,
+        text: `Administrator account provisioned for ${inviteName}. Invitation email automatically dispatched to ${inviteEmail}.`,
       });
-      setTimeout(() => setFeedback(null), 5000);
+      setTimeout(() => setFeedback(null), 6000);
 
       await fetchAdmins();
     } catch (err: any) {
@@ -392,10 +430,22 @@ export default function AdministratorsPage() {
 
   const handleCopyCredentials = () => {
     if (!createdCredentials) return;
-    const text = `SalahNear Staff Administrator Credentials:\nName: ${createdCredentials.name}\nEmail: ${createdCredentials.email}\nPassword: ${createdCredentials.pass}\nRole: ${createdCredentials.role.toUpperCase()}\nScope: ${createdCredentials.scope}\nLogin URL: ${typeof window !== 'undefined' ? window.location.origin : ''}/login`;
+    const text = `SalahNear Staff Administrator Account:\nName: ${createdCredentials.name}\nEmail: ${createdCredentials.email}\nPassword: ${createdCredentials.pass}\nRole: ${createdCredentials.role.toUpperCase()}\nScope: ${createdCredentials.scope}\nInvitation Acceptance Link: ${createdCredentials.inviteUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/login`}\nLogin URL: ${typeof window !== 'undefined' ? window.location.origin : ''}/login`;
     navigator.clipboard.writeText(text);
     setHasCopied(true);
     setTimeout(() => setHasCopied(false), 3000);
+  };
+
+  const handleCopyInviteLink = (url?: string) => {
+    const targetUrl = url || createdCredentials?.inviteUrl;
+    if (!targetUrl) return;
+    navigator.clipboard.writeText(targetUrl);
+    setHasCopiedLink(true);
+    setFeedback({ type: 'success', text: 'Invitation acceptance link copied to clipboard!' });
+    setTimeout(() => {
+      setHasCopiedLink(false);
+      setFeedback(null);
+    }, 3000);
   };
 
   const filteredAdmins = admins.filter((a) => {
@@ -562,7 +612,12 @@ export default function AdministratorsPage() {
 
                     {/* Status */}
                     <td className="px-4 py-4">
-                      {admin.is_active ? (
+                      {admin.invitation_status === 'pending' || (!admin.is_active && admin.invitation_token) ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                          <Mail className="w-3 h-3 mr-1 text-amber-600" />
+                          Pending Acceptance
+                        </span>
+                      ) : admin.is_active ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
                           Active
@@ -579,12 +634,27 @@ export default function AdministratorsPage() {
                     <td className="px-4 py-4 text-xs font-mono text-slate-500">
                       {admin.last_sign_in_at
                         ? new Date(admin.last_sign_in_at).toLocaleDateString()
+                        : admin.invitation_status === 'pending'
+                        ? 'Invited'
                         : 'Never'}
                     </td>
 
                     {/* Actions */}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {admin.invitation_token && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/accept-invite?token=${admin.invitation_token}`;
+                              handleCopyInviteLink(url);
+                            }}
+                            title="Copy Invitation Link"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => initiateToggleStatus(admin)}
                           title={admin.is_active ? 'Suspend Administrator' : 'Reactivate Administrator'}
@@ -829,28 +899,62 @@ export default function AdministratorsPage() {
         </div>
       )}
 
-      {/* Generated Credentials Modal (for Top-Down Delivery) */}
+      {/* Generated Credentials & Invitation Modal */}
       {createdCredentials && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 border border-emerald-100">
+              <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 border border-emerald-100 shrink-0">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Administrator Provisioned</h3>
+                <h3 className="text-base font-bold text-slate-900">Administrator Invitation Dispatched</h3>
                 <p className="text-xs text-slate-500">
-                  Account is ready. Share these credentials with the designated officer.
+                  Account created in pending acceptance state. An automated invitation email was dispatched.
                 </p>
               </div>
             </div>
 
+            {/* Email Dispatch Notice */}
+            <div className="mb-4 p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                <Mail className="w-4 h-4 text-emerald-600" />
+                Invitation Email Sent Automatically
+              </div>
+              <p className="text-[11px] text-emerald-700 leading-relaxed">
+                An invitation email with an acceptance link has been dispatched to <strong>{createdCredentials.email}</strong>. Once accepted, they can log in using their credentials below.
+              </p>
+            </div>
+
+            {/* Direct Invitation Acceptance Link */}
+            {createdCredentials.inviteUrl && (
+              <div className="mb-4 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Direct Invitation Link (7-Day Validity)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyInviteLink()}
+                    className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1"
+                  >
+                    {hasCopiedLink ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    {hasCopiedLink ? 'Copied' : 'Copy Link'}
+                  </button>
+                </div>
+                <div className="p-2 bg-white rounded-lg border border-slate-200 text-xs font-mono text-slate-700 break-all select-all">
+                  {createdCredentials.inviteUrl}
+                </div>
+              </div>
+            )}
+
+            {/* Account Information Card */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5 font-mono text-xs">
               <div>
                 <span className="text-slate-400 block font-sans text-[11px] uppercase tracking-wider font-semibold">
                   Administrator
                 </span>
-                <span className="text-slate-800 font-semibold">{createdCredentials.name}</span>
+                <span className="text-slate-800 font-semibold font-sans">{createdCredentials.name}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-sans text-[11px] uppercase tracking-wider font-semibold">
@@ -865,13 +969,13 @@ export default function AdministratorsPage() {
               </div>
               <div>
                 <span className="text-slate-400 block font-sans text-[11px] uppercase tracking-wider font-semibold">
-                  Email
+                  Login Email
                 </span>
                 <span className="text-slate-900 select-all">{createdCredentials.email}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-sans text-[11px] uppercase tracking-wider font-semibold">
-                  Temporary Password
+                  Account Password
                 </span>
                 <span className="text-emerald-800 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200 select-all">
                   {createdCredentials.pass}
@@ -888,19 +992,19 @@ export default function AdministratorsPage() {
                 {hasCopied ? (
                   <>
                     <Check className="w-4 h-4 text-emerald-600" />
-                    Copied to Clipboard!
+                    Copied Account Summary!
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 text-slate-500" />
-                    Copy Credentials
+                    Copy Account & Link
                   </>
                 )}
               </button>
               <button
                 type="button"
                 onClick={() => setCreatedCredentials(null)}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-colors"
               >
                 Dismiss
               </button>

@@ -14,7 +14,8 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
   const isAuthPage =
     pathname === '/login' ||
     pathname === '/forgot-password' ||
-    pathname === '/reset-password';
+    pathname === '/reset-password' ||
+    pathname?.startsWith('/accept-invite');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated && !isAuthPage) {
