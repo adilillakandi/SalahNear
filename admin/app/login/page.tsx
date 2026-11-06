@@ -4,10 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAdminAuth } from '@/lib/auth-context';
-import { AdminRole } from '@/lib/types';
 import {
   Building2,
-  Shield,
   Lock,
   Mail,
   Eye,
@@ -20,7 +18,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { signIn, isAuthenticated, isLoading } = useAdminAuth();
 
-  const [activeTab, setActiveTab] = useState<'super_admin' | 'mosque_admin'>('super_admin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -35,20 +32,12 @@ export default function LoginPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Clear any default values or browser-injected autofill on mount and tab switch
+  // Clear any default values or browser-injected autofill on mount
   useEffect(() => {
     setEmail('');
     setPassword('');
     setIsReadOnly(true);
-  }, [activeTab]);
-
-  const handleTabChange = (tab: 'super_admin' | 'mosque_admin') => {
-    setActiveTab(tab);
-    setEmail('');
-    setPassword('');
-    setErrorMsg(null);
-    setIsReadOnly(true);
-  };
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +45,7 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     try {
-      const ok = await signIn(email, password, activeTab);
+      const ok = await signIn(email, password);
       if (ok) {
         router.push('/');
       } else {
@@ -98,34 +87,6 @@ export default function LoginPage() {
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-slate-900/90 backdrop-blur-md py-8 px-6 shadow-2xl rounded-3xl sm:px-10 border border-slate-800">
-          {/* Two Admin Login Tabs */}
-          <div className="flex rounded-2xl bg-slate-800/80 p-1 mb-6 border border-slate-700/60">
-            <button
-              type="button"
-              onClick={() => handleTabChange('super_admin')}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                activeTab === 'super_admin'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              Super Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('mosque_admin')}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                activeTab === 'mosque_admin'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              Mosque Admin
-            </button>
-          </div>
-
           {errorMsg && (
             <div className="mb-4 p-3 rounded-xl bg-red-950/60 border border-red-800/60 text-red-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -227,7 +188,7 @@ export default function LoginPage() {
                   <span>Authenticating...</span>
                 ) : (
                   <>
-                    <span>Sign In to {activeTab === 'super_admin' ? 'Super Admin' : 'Mosque Admin'}</span>
+                    <span>Sign In to Admin Portal</span>
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </>
                 )}
