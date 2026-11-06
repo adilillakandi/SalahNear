@@ -95,9 +95,9 @@ begin
   left join public.mosques m on m.id = ma.mosque_id
   left join lateral (
     select status, token
-    from public.admin_invitations
-    where lower(trim(email)) = lower(trim(coalesce(u.email, p.email)))
-    order by created_at desc
+    from public.admin_invitations ai_inner
+    where lower(trim(ai_inner.email)) = lower(trim(coalesce(u.email, p.email)))
+    order by ai_inner.created_at desc
     limit 1
   ) ai on true
   where ur.role in ('super_admin', 'mosque_admin')
@@ -586,9 +586,9 @@ begin
   left join public.mosques m on m.id = ma.mosque_id
   left join lateral (
     select password_hash, status
-    from public.admin_invitations
-    where lower(trim(email)) = v_clean_email
-    order by created_at desc
+    from public.admin_invitations ai_inner
+    where lower(trim(ai_inner.email)) = v_clean_email
+    order by ai_inner.created_at desc
     limit 1
   ) ai on true
   where lower(trim(coalesce(u.email, p.email))) = v_clean_email
@@ -666,3 +666,4 @@ end;
 $$;
 
 grant execute on function public.verify_admin_credentials(text, text) to authenticated, anon, service_role;
+

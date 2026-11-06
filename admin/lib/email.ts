@@ -99,6 +99,8 @@ export function generateInvitationEmailHtml({
   `.trim();
 }
 
+import nodemailer from 'nodemailer';
+
 export async function sendInvitationEmail(params: SendInvitationEmailParams): Promise<{
   success: boolean;
   message: string;
@@ -108,8 +110,9 @@ export async function sendInvitationEmail(params: SendInvitationEmailParams): Pr
   const subject = `Invitation to join SalahNear Portal as ${
     params.role === 'super_admin' ? 'Super Administrator' : 'Mosque Administrator'
   }`;
+  const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_USER || process.env.GMAIL_USER || 'SalahNear Portal <noreply@salahnear.org>';
 
-  // 1. Try Resend if configured
+  // 1. Try Resend if RESEND_API_KEY is configured
   if (process.env.RESEND_API_KEY) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -119,7 +122,7 @@ export async function sendInvitationEmail(params: SendInvitationEmailParams): Pr
           Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: process.env.EMAIL_FROM || 'SalahNear Portal <noreply@salahnear.org>',
+          from: fromAddress,
           to: [params.toEmail],
           subject,
           html,
@@ -133,14 +136,49 @@ export async function sendInvitationEmail(params: SendInvitationEmailParams): Pr
     }
   }
 
-  // 2. Safe Fallback / Development Simulation
-  // Logs the dispatched invitation safely and returns delivery status
+  // 2. Try Nodemailer if SMTP or Gmail credentials are provided
+  const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
+  const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
+  const smtpHost = process.env.SMTP_HOST || (process.env.GMAIL_USER ? 'smtp.gmail.com' : undefined);
+  const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : (smtpHost === 'smtp.gmail.com' ? 465 : 587);
+
+  if (smtpHost && smtpUser && smtpPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      await transporter.sendMail({
+        from: fromAddress,
+        to: params.toEmail,
+        subject,
+        html,
+      });
+
+      return {
+        success: true,
+        message: `Invitation email successfully delivered via SMTP to ${params.toEmail}.`,
+      };
+    } catch (err: any) {
+      console.warn('SMTP dispatch error:', err.message);
+    }
+  }
+
+  // 3. Fallback / Development Simulation
+  // When no email provider credentials exist in .env.local yet
   console.log(`[SalahNear Mailer] Dispatched invitation to ${params.toEmail} (${params.role})`);
-  console.log(`[SalahNear Mailer] Invite Link: ${params.inviteUrl}`);
+  console.log(`[SalahNear Mailer] Direct Invite Link: ${params.inviteUrl}`);
 
   return {
     success: true,
     simulated: true,
-    message: `Invitation email generated and dispatched for ${params.toEmail}.`,
+    message: `Invitation generated! Note: No SMTP or Resend credentials are configured in .env.local yet, so you can share the direct invitation link with your friend.`,
   };
 }
+
