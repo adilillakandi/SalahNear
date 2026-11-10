@@ -115,21 +115,28 @@ export async function sendInvitationEmail(params: SendInvitationEmailParams): Pr
   // 1. Try Resend if RESEND_API_KEY is configured
   if (process.env.RESEND_API_KEY) {
     try {
+      const resendFrom =
+        process.env.EMAIL_FROM || 'SalahNear Portal <onboarding@resend.dev>';
+
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`,
         },
         body: JSON.stringify({
-          from: fromAddress,
+          from: resendFrom,
           to: [params.toEmail],
           subject,
           html,
         }),
       });
+
+      const resData = await res.json();
       if (res.ok) {
         return { success: true, message: `Invitation email sent via Resend to ${params.toEmail}.` };
+      } else {
+        console.warn('Resend API returned error:', resData);
       }
     } catch (err: any) {
       console.warn('Resend email dispatch error:', err.message);
